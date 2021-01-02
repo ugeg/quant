@@ -14,7 +14,6 @@ def read_data_and_show(stock_name):
     code_str = name2code(stock_name)
     stock_data = pd.read_csv(data_path + "\\day\\" + code_str + '.csv', encoding='gbk', parse_dates=['trade_date'],
                              index_col='trade_date')
-    pd.read
     print(stock_data.head())
     plt.plot(stock_data['close'])
     plt.show()
