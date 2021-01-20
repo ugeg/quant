@@ -14,13 +14,43 @@ stock_index_file = "D:/QuantData/base/stock_base.csv"
 daily_line_path = "D:/QuantData/day/"
 download_start_date = "19940101"
 pro = ts.pro_api("09bc9aa347e21a71a3c94fbcf0b6244276ff5dcc27e9e54328950d2c")
-mysql_engine = utils.mysql_util.mysql_util("localhost", "jing", "123456", "quant").create_engine()
 def data_to_mysql(data : pd.DataFrame, table:str, engine):
     data.to_sql(table, engine, if_exists="append", index=False)
+def download_daily_data_to_mysql(code, start_date=None):
+    while 1:
+        try:
+            df: pd.DataFrame = pro.daily(ts_code=code, start_date=start_date)
+            data_to_mysql(df,"daily",mysql_engine)
+            break
+        except Exception as e:
+            print(e)
+            print("超时")
+            time.sleep(10)
+    time.sleep(0.3)
+mysql_config = utils.conf.mysql_config
+mysql_util = utils.mysql_util.MysqlUtil(mysql_config.ip, mysql_config.user, mysql_config.passwd, mysql_config.db)
+mysql_util.create_connect()
+stock_basic_table = 'stock_basic'
+mysql_count = mysql_util.query_count(stock_basic_table)
+print("mysql_count:",mysql_count)
+mysql_engine = mysql_util.create_engine()
+# mysql_util = utils.mysqlutil.MysqlUtil("localhost", "jing", "123456", "quant")
+# mysql_util.create_connect()
+# print(mysql_util.query("show tables"))
+base_data = pro.query(stock_basic_table, exchange='', list_status='L', fields='ts_code,symbol,name,area,industry,fullname,enname,market,exchange,curr_type,list_status,list_date,delist_date,is_hs')
+df_count = len(base_data.index)
+print("df_count:",df_count)
+if mysql_count != df_count:
+    mysql_util.truncate(stock_basic_table)
+    base_data.to_sql(stock_basic_table, mysql_engine, if_exists="append", index=False)
+for i, code in enumerate(base_data['ts_code']):
+    print(i + 1, "/", df_count, code)
+    download_daily_data_to_mysql(code,download_start_date)
+
 
 def download_stock_index():
     # data = pro.query('stock_basic', exchange='', list_status='L', fields='ts_code,symbol,name,area,industry,list_date')
-    data = pro.query('stock_basic', exchange='', list_status='L', fields='ts_code,symbol,name,area,industry,fullname,enname,market,exchange,curr_type,list_status,list_date,delist_date,is_hs')
+    data = pro.query(stock_basic_table, exchange='', list_status='L', fields='ts_code,symbol,name,area,industry,fullname,enname,market,exchange,curr_type,list_status,list_date,delist_date,is_hs')
     data.to_csv(stock_index_file, encoding='gbk', index=False)
     data.to_sql()
 
@@ -45,6 +75,7 @@ def download_daily_data(code, path, start_date=None):
                 data_to_mysql(df,"daily",mysql_engine)
                 break
             except Exception as e:
+
                 print("超时")
                 time.sleep(10)
         time.sleep(0.3)
@@ -58,11 +89,11 @@ def create_dir_if_not_exist():
         os.mkdir(daily_line_path)
 
 
-if __name__ == '__main__':
+# if __name__ == '__main__':
     # data = pro.query('stock_basic', exchange='', list_status='L',
     #                  fields='ts_code,symbol,name,area,industry,fullname,enname,market,exchange,curr_type,list_status,list_date,delist_date,is_hs')
     # mysql_util = utils.mysql_util.mysql_util("localhost", "jing", "123456", "quant")
     # data_to_mysql(data,"stock_basic", mysql_util.create_engine())
-    create_dir_if_not_exist()
-    read_index_file_and_download()
-    print("下载结束")
+    # create_dir_if_not_exist()
+    # read_index_file_and_download()
+    # print("下载结束")

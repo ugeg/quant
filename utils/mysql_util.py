@@ -6,7 +6,7 @@ import pymysql
 from sqlalchemy import create_engine
 import pandas as pd
 
-class mysql_util:
+class MysqlUtil:
     def __init__(self, host: str, user: str, passwd: str, db: str, port: int = 3306, charset: str = 'utf8'):
         self.host = host
         self.user = user
@@ -15,18 +15,17 @@ class mysql_util:
         self.host = host
         self.port = port
         self.charset = charset
-        self.sqlalchemy_url = "mysql+mysqlconnector://{}:{}@{}:{}/{}".format(user, passwd, host, port, db)
+        # mysql8.0以上默认加密方式变了，需要执行 ALTER USER 'jing'@'*' IDENTIFIED WITH mysql_native_password BY '123456';
+        self.sqlalchemy_url = "mysql+mysqlconnector://{}:{}@{}:{}/{}?auth_plugin=mysql_native_password".format(user, passwd, host, port, db)
 
     def create_connect(self):
         self.connect = pymysql.connect(host=self.host, port=self.port, user=self.user, passwd=self.passwd, db=self.db,
                                        charset=self.charset)
-
     def query(self, sql):
         cursor = self.connect.cursor()
         cursor.execute(sql)
         data = cursor.fetchall()
         return data
-
     def insert(self, sql):
         cursor = self.connect.cursor()
         cursor.execute(sql)
@@ -35,6 +34,14 @@ class mysql_util:
         cursor = self.connect.cursor()
         cursor.executemany(sql, param)
 
+    def query_count(self, table_name):
+        cursor = self.connect.cursor()
+        cursor.execute("select count(1) as cnt from "+table_name)
+        data = cursor.fetchone()
+        return data[0]
+    def truncate(self, table_name):
+        cursor = self.connect.cursor()
+        cursor.execute("truncate "+table_name)
     def create_engine(self):
         engine = create_engine(self.sqlalchemy_url)
         return engine
@@ -44,7 +51,7 @@ class mysql_util:
 
 
 if __name__ == '__main__':
-    mysql_util = mysql_util("localhost", "jing", "123456", "test")
+    mysql_util = MysqlUtil("localhost", "jing", "123456", "test")
     conn = mysql_util.create_connect()
     print(mysql_util.query("select * from user"))
     # 创建一个 dataframe格式 数据

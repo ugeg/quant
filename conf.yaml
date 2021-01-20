@@ -1,0 +1,8 @@
+mysql:
+  ip: localhost
+  port: 3306
+  user: jing
+  passwd: '123456'
+  db: quant
+tushare:
+  token: 09bc9aa347e21a71a3c94fbcf0b6244276ff5dcc27e9e54328950d2c
