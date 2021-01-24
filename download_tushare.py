@@ -11,6 +11,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 import utils.mysql_util
+from utils import time_util
 from utils.entity import Daily, StockBasic
 
 download_start_date = 19940101
@@ -20,6 +21,10 @@ daily_table_name = "daily"
 
 
 def download_daily_data_to_mysql(ts_code, start_date=None):
+    if start_date is not None:
+        if start_date >= time_util.date_to_str(time_util.get_latest_trading_day()):
+            print(ts_code, "data is up to date,skip...")
+            return
     while 1:
         try:
             df: pd.DataFrame = tushare_pro.daily(ts_code=ts_code, start_date=start_date)
