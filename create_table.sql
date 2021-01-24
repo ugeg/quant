@@ -15,7 +15,7 @@ CREATE TABLE `stock_basic` (
   `delist_date` varchar(8)  COMMENT '	退市日期',
   `is_hs` varchar(1)  COMMENT '是否沪深港通标的，N否 H沪股通 S深股通',
   PRIMARY KEY (`ts_code`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 DROP TABLE IF EXISTS `daily`;
 CREATE TABLE `daily` (
@@ -29,5 +29,6 @@ CREATE TABLE `daily` (
   `change` float COMMENT '涨跌额',
   `pct_chg` float COMMENT '涨跌幅 （未复权）',
   `vol` float COMMENT '成交量 （手）',
-  `amount` float COMMENT '成交额 （千元）'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+  `amount` float COMMENT '成交额 （千元）',
+  PRIMARY KEY (`ts_code`,`trade_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
