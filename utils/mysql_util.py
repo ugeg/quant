@@ -52,8 +52,8 @@ class MysqlUtil:
         return data[0]
 
     def truncate(self, table_name):
-        cursor = self.connect.cursor()
-        cursor.execute("truncate " + table_name)
+        with self.engine.connect() as connect:
+            connect.execute("truncate " + table_name)
 
     def close(self):
         self.connect.close()
@@ -61,6 +61,9 @@ class MysqlUtil:
 
 if __name__ == '__main__':
     mysql_util = MysqlUtil("localhost", "jing", "123456", "quant")
+    with mysql_util.engine.connect() as conn:
+        conn.execute("truncate stock_basic")
+    print("gg")
     session = Session(mysql_util.engine)
     # query = session.query(entity.StockBasic)
     # query = session.query(entity.Daily).filter(entity.Daily.trade_date == 20200103).first()

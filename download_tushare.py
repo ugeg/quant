@@ -47,7 +47,7 @@ if __name__ == '__main__':
     mysql_config = utils.conf.mysql_config
     mysql_util = utils.mysql_util.MysqlUtil(mysql_config.ip, mysql_config.user, mysql_config.passwd, mysql_config.db)
     mysql_engine = mysql_util.engine
-    session = Session(mysql_util.engine)
+    session = Session(mysql_util.engine, autocommit=True)
     print("Downloading start.")
     # 查询本地stock_basic数据量
     local_stock_count = session.query(func.count(StockBasic.ts_code)).one()[0]
