@@ -14,7 +14,7 @@ stock_index_file = "D:/QuantData/base/stock_base.csv"
 daily_line_path = "D:/QuantData/day/"
 download_start_date = "19940101"
 pro = ts.pro_api("09bc9aa347e21a71a3c94fbcf0b6244276ff5dcc27e9e54328950d2c")
-mysql_engine = utils.mysql_util.MysqlUtil("localhost", "jing", "123456", "quant").create_engine()
+mysql_engine = utils.mysql_util.MysqlConnector("localhost", "jing", "123456", "quant").create_engine()
 
 
 def data_to_mysql(data: pd.DataFrame, table: str, engine):

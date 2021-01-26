@@ -13,7 +13,7 @@ from utils.entity import Daily
 mysql_sqlalchemy_url = "mysql+mysqlconnector://{}:{}@{}:{}/{}?auth_plugin=mysql_native_password"
 
 
-class MysqlUtil:
+class MysqlConnector:
     def __init__(self, host: str, user: str, passwd: str, db: str, port: int = 3306, charset: str = 'utf8'):
         self.host = host
         self.user = user
@@ -60,7 +60,7 @@ class MysqlUtil:
 
 
 if __name__ == '__main__':
-    mysql_util = MysqlUtil("localhost", "jing", "123456", "quant")
+    mysql_util = MysqlConnector("localhost", "jing", "123456", "quant")
     with mysql_util.engine.connect() as conn:
         conn.execute("truncate stock_basic")
     print("gg")

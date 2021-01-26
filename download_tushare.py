@@ -2,7 +2,6 @@
 # @Author  : pengj    <ugeg@163.com>
 # @Time    : 2019/6/24 23:58
 # @File    : download_tushare.py
-import os
 import time
 
 import pandas as pd
@@ -22,7 +21,7 @@ daily_table_name = "daily"
 
 def download_daily_data_to_mysql(ts_code, start_date=None):
     if start_date is not None:
-        if start_date >= time_util.date_to_str(time_util.get_latest_trading_day()):
+        if start_date > time_util.date_to_str(time_util.get_latest_trading_day()):
             print(ts_code, "data is up to date,skip...")
             return
     while 1:
@@ -34,20 +33,21 @@ def download_daily_data_to_mysql(ts_code, start_date=None):
             print(e)
             print("ERROR: download daily data timeout")
             time.sleep(10)
-    time.sleep(0.3)
+    time.sleep(0.2)
 
 
 def stock_basic_save_to_mysql(stock_basic_df: pd.DataFrame, if_truncate: bool):  # 下载stock_basic到mysql
     if if_truncate:
-        mysql_util.truncate(stock_basic_table)
+        mysql_connector.truncate(stock_basic_table)
         stock_basic_df.to_sql(stock_basic_table, mysql_engine, if_exists="append", index=False)
 
 
 if __name__ == '__main__':
-    mysql_config = utils.conf.mysql_config
-    mysql_util = utils.mysql_util.MysqlUtil(mysql_config.ip, mysql_config.user, mysql_config.passwd, mysql_config.db)
-    mysql_engine = mysql_util.engine
-    session = Session(mysql_util.engine, autocommit=True)
+    # mysql_config = utils.conf.mysql_config
+    # mysql_util = utils.mysql_util.MysqlUtil(mysql_config.ip, mysql_config.user, mysql_config.passwd, mysql_config.db)
+    mysql_connector = utils.mysql_connector
+    mysql_engine = mysql_connector.engine
+    session = Session(mysql_connector.engine, autocommit=True)
     print("Downloading start.")
     # 查询本地stock_basic数据量
     local_stock_count = session.query(func.count(StockBasic.ts_code)).one()[0]
