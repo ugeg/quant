@@ -5,7 +5,8 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 from pandas.plotting import register_matplotlib_converters
-
+import mpl_finance
+import mplfinance
 register_matplotlib_converters()
 data_path = r"D:/QuantData/"
 
@@ -14,6 +15,16 @@ def read_data_and_show(stock_name):
     code_str = name2code(stock_name)
     stock_data = pd.read_csv(data_path + "\\day\\" + code_str + '.csv', encoding='gbk', parse_dates=['trade_date'],
                              index_col='trade_date')
+    # stock_data = pd.read_csv(data_path + "\\day\\" + code_str + '.csv', encoding='gbk')
+    # fig, ax = plt.subplots(figsize=(10,5))
+    # mpl_finance.candlestick_ochl(ax=ax,
+    #                              quotes=stock_data[['trade_date', 'open', 'close', 'high', 'low']].values,
+    #                              width=0.7,
+    #                              colorup='r',
+    #                              colordown='g',
+    #                              alpha=0.7)
+    # ax.xaxis_date()
+    # plt.xticks(rotation=30);
     print(stock_data.head())
     plt.plot(stock_data['close'])
     plt.show()
