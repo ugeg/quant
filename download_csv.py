@@ -14,8 +14,9 @@ stock_index_file = "D:/QuantData/base/stock_base.csv"
 daily_line_path = "D:/QuantData/day/"
 download_start_date = "19940101"
 pro = ts.pro_api("09bc9aa347e21a71a3c94fbcf0b6244276ff5dcc27e9e54328950d2c")
-mysql_engine = utils.mysql_util.MysqlConnector("localhost", "jing", "123456", "quant").create_engine()
-
+# mysql_engine = utils.mysql_util.MysqlConnector("localhost", "jing", "123456", "quant").create_engine()
+mysql_connector = utils.mysql_connector
+mysql_engine = mysql_connector.engine
 
 def data_to_mysql(data: pd.DataFrame, table: str, engine):
     data.to_sql(table, engine, if_exists="append", index=False)
@@ -26,7 +27,7 @@ def download_stock_index():
     data = pro.query('stock_basic', exchange='', list_status='L',
                      fields='ts_code,symbol,name,area,industry,fullname,enname,market,exchange,curr_type,list_status,list_date,delist_date,is_hs')
     data.to_csv(stock_index_file, encoding='gbk', index=False)
-    data.to_sql()
+    # data.to_sql()
 
 
 def read_index_file_and_download():
@@ -45,13 +46,13 @@ def download_daily_data(code, path, start_date=None):
         while 1:
             try:
                 df: pd.DataFrame = pro.daily(ts_code=code, start_date=start_date)
-                # df.to_csv(path + code + ".csv", encoding='gbk', index=False)
-                data_to_mysql(df, "daily", mysql_engine)
+                df.to_csv(path + code + ".csv", encoding='gbk', index=False)
+                # data_to_mysql(df, "daily", mysql_engine)
                 break
             except Exception as e:
                 print("超时")
                 time.sleep(10)
-        time.sleep(0.3)
+        time.sleep(0.2)
 
 
 def create_dir_if_not_exist():

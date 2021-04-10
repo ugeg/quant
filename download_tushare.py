@@ -20,6 +20,7 @@ daily_table_name = "daily"
 
 
 def download_daily_data_to_mysql(ts_code, start_date=None):
+
     if start_date is not None:
         if start_date > time_util.date_to_str(time_util.get_latest_trading_day()):
             print(ts_code, "data is up to date,skip...")
@@ -28,6 +29,7 @@ def download_daily_data_to_mysql(ts_code, start_date=None):
         try:
             df: pd.DataFrame = tushare_pro.daily(ts_code=ts_code, start_date=start_date)
             df.to_sql(daily_table_name, mysql_engine, if_exists="append", index=False)
+            # df.to_csv("D:/QuantData/base/day/"+ts_code+".csv",encoding='gbk', index=False)
             break
         except Exception as e:
             print(e)
@@ -40,6 +42,7 @@ def stock_basic_save_to_mysql(stock_basic_df: pd.DataFrame, if_truncate: bool): 
     if if_truncate:
         mysql_connector.truncate(stock_basic_table)
         stock_basic_df.to_sql(stock_basic_table, mysql_engine, if_exists="append", index=False)
+        # stock_basic_df.to_csv("D:/QuantData/base/stock_base.csv", encoding='gbk', index=False)
 
 
 if __name__ == '__main__':

@@ -10,7 +10,8 @@ from sqlalchemy.orm import Session
 from utils import entity
 from utils.entity import Daily
 
-mysql_sqlalchemy_url = "mysql+mysqlconnector://{}:{}@{}:{}/{}?auth_plugin=mysql_native_password"
+# mysql_sqlalchemy_url = "mysql+mysqlconnector://{}:{}@{}:{}/{}?auth_plugin=mysql_native_password"
+mysql_sqlalchemy_url = "mysql+pymysql://{}:{}@{}:{}/{}"
 
 
 class MysqlConnector:
