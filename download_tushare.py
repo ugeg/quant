@@ -33,8 +33,11 @@ def download_daily_data_to_mysql(ts_code, start_date=None):
             break
         except Exception as e:
             print(e)
+            if e.args[0] == "type object 'object' has no attribute 'dtype'":
+                print("code:", ts_code, "\tno more data")
+                break
             print("ERROR: download daily data timeout")
-            time.sleep(10)
+            time.sleep(3)
     time.sleep(0.2)
 
 
