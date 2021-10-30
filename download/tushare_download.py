@@ -2,6 +2,7 @@ import datetime
 import time
 
 import tushare as ts
+from pandas import DataFrame
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -10,28 +11,53 @@ import utils
 from utils.logging_util import count_time
 
 pro = ts.pro_api(utils.conf.tushare_token)
-stock_basic_table = 'stock_basic'
-daily_table_name = "daily"
 mysql_connector = utils.mysql_connector
 mysql_engine = mysql_connector.engine
 session = Session(mysql_connector.engine, autocommit=True)
 
 
-def download_stock_basic_to_mysql():  # 下载stock_basic到mysql
-    # 查询本地stock_basic数据量
-    local_stock_count = session.query(func.count(StockBasic.ts_code)).one()[0]
-    print("local_stock_count:", local_stock_count)
-    # 查询远程stock_basic数据量并保存到mysql
-    base_data = pro.query(
-        stock_basic_table, exchange='', list_status='L',
-        fields='ts_code,symbol,name,area,industry,fullname,enname,market,exchange,curr_type,list_status,list_date,delist_date,is_hs')
-    remote_stock_count = len(base_data.index)
-    print("remote_stock_count:", remote_stock_count)
-    if local_stock_count != len(base_data.index):
-        print("stock_basic save to mysql")
-        mysql_connector.truncate(stock_basic_table)
-        base_data.to_sql(stock_basic_table, mysql_engine, if_exists="append", index=False)
-        # stock_basic_df.to_csv("D:/QuantData/base/stock_base.csv", encoding='gbk', index=False)
+def save(df: DataFrame, table_name, db_type='mysql'):
+    if db_type == 'mysql':
+        df.to_sql(table_name, mysql_engine, if_exists="append", index=False)
+        print("save", len(df.index), "record to ", table_name)
+    else:
+        print("Method [save] not implement! Please check")
+
+
+@count_time
+def download_basic_to_mysql(basic_type):
+    mysql_connector.truncate(basic_type)
+    print("download", basic_type, "and save to mysql")
+    if basic_type == 'index_basic':
+        market_dict = {'MSCI': 'MSCI指数', 'CSI': '中证指数', 'SSE': '上交所指数', 'SZSE': '深交所指数', 'CICC': '中金指数', 'SW': '申万指数',
+                       'OTH': '其他指数'}
+        for market in market_dict.keys():
+            print("download index_basic for market", market)
+            df = pro.index_basic(market=market,
+                                 fields=["ts_code", "name", "market", "publisher", "category", "base_date",
+                                         "base_point", "list_date", "index_type", "fullname", "weight_rule", "desc",
+                                         "exp_date"])
+            save(df, basic_type)
+    elif basic_type == 'stock_basic':
+        df = pro.stock_basic(
+            fields=["ts_code", "symbol", "name", "area", "industry", "market", "list_date", "fullname", "enname",
+                    "cnspell", "exchange", "curr_type", "list_status", "delist_date", "is_hs"])
+        save(df, basic_type)
+
+
+@count_time
+def download_index_daily_to_mysql():
+    table = "index_daily"
+    mysql_connector.truncate(table)
+    index_dict = {'000001.SH': '上证指数', '000016.SH': '上证50', '000300.SH': '沪深300', '000688.SH': '科创50',
+                  '399001.SZ': '深证成指',
+                  '399006.SZ': '创业板指'}
+    for k in index_dict.keys():
+        print("download ", index_dict[k])
+        df = pro.index_daily(ts_code=k, start_date='19940101',
+                             fields=["ts_code", "trade_date", "close", "open", "high", "low", "pre_close", "change",
+                                     "pct_chg", "vol", "amount"])
+        save(df, table)
 
 
 def get_daily(ts_code='', trade_date='', start_date='', end_date=''):
@@ -53,7 +79,8 @@ def get_daily(ts_code='', trade_date='', start_date='', end_date=''):
 
 
 @count_time
-def download_daily_by_day():
+def download_stock_daily_delta():
+    daily_table_name = "daily"
     start_day = session.query(func.max(Daily.trade_date)).scalar()
     if start_day:
         start_day = (datetime.datetime.strptime(start_day, "%Y%m%d") + datetime.timedelta(days=1)).strftime("%Y%m%d")
@@ -68,12 +95,13 @@ def download_daily_by_day():
     download_day_count = len(df.index)
     for i, date in enumerate(df['cal_date']):
         daily_data_df = get_daily(trade_date=date)
-        daily_data_df.to_sql(daily_table_name, mysql_engine, if_exists="append", index=False)
-        print("Downloading daily data:", date, "count:", len(daily_data_df.index), "\tcurrent progress:[", i + 1, "/",
+        save(daily_data_df, daily_table_name)
+        print("Downloading stock daily data:", date, "count:", len(daily_data_df.index), "\tcurrent progress:[", i + 1, "/",
               download_day_count, "]", (i + 1) * 100 // download_day_count, "%")
 
 
 if __name__ == '__main__':
-    print("Downloading start.", datetime.datetime.now())
-    download_stock_basic_to_mysql()
-    # download_daily_by_day()
+    # download_basic_to_mysql('stock_basic')
+    # download_basic_to_mysql('index_basic')
+    download_index_daily_to_mysql()
+    # download_stock_daily_delta()
