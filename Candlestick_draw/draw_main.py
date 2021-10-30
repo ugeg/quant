@@ -243,7 +243,7 @@ def draw2(df: pd.DataFrame, ts_name: str):
     grid_chart.render("b.html")
 
 if __name__ == '__main__':
-    stock = "中兴通讯"
+    stock = "紫光国微"
     code = get_code(stock)
     df = get_data(code)
     draw2(df, get_name(code))

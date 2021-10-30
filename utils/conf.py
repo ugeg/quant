@@ -22,7 +22,7 @@ class MysqlConfig:
 
 mysql_config: MysqlConfig = None
 tushare_token: str = None
-
+code2name_cache:dict
 
 def init_config():
     global mysql_config

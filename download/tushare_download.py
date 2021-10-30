@@ -2,26 +2,14 @@ import datetime
 import time
 
 import tushare as ts
-from pandas import DataFrame
 from sqlalchemy import func
-from sqlalchemy.orm import Session
-
-from utils.entity import Daily, StockBasic
+from utils.entity import Daily
 import utils
 from utils.logging_util import count_time
-
+from utils.global_operator import save
 pro = ts.pro_api(utils.conf.tushare_token)
 mysql_connector = utils.mysql_connector
-mysql_engine = mysql_connector.engine
-session = Session(mysql_connector.engine, autocommit=True)
-
-
-def save(df: DataFrame, table_name, db_type='mysql'):
-    if db_type == 'mysql':
-        df.to_sql(table_name, mysql_engine, if_exists="append", index=False)
-        print("save", len(df.index), "record to ", table_name)
-    else:
-        print("Method [save] not implement! Please check")
+session = utils.Session
 
 
 @count_time
