@@ -1,4 +1,6 @@
+import datetime
 import re
+import time
 
 import pandas as pd
 import requests
@@ -59,7 +61,27 @@ def download_price_his(ts_code, startdate, enddate):
          "volume": volume,
          "percentage": percentage})
     save(df, "price_his")
-
+def download_all_price_his(ts_code):
+    ts_code = format_stock_code(ts_code)
+    start_date_list = utils.session.execute('SELECT max(start_date) FROM `price_his`').fetchall()
+    if(len(start_date_list)==0):
+        sql = "SELECT trade_date FROM `daily` WHERE ts_code='{}' ORDER BY trade_date".format(ts_code)
+    else:
+        sql = "SELECT trade_date FROM `daily` WHERE ts_code='{}' and trade_date>'{}' ORDER BY trade_date".format(ts_code,start_date_list[0])
+    result = utils.session.execute(sql).fetchall()
+    i = 1
+    for day in result:
+        print(day[0], i, "/", len(result), round(i * 100 / len(result), 2), '%')
+        i += 1
+        while 1:
+            try:
+                download_price_his(ts_code, startdate=day[0], enddate=day[0])
+                time.sleep(1)
+                break
+            except Exception as e:
+                print(e)
+                print(datetime.datetime.now(), "timeout")
+                time.sleep(180)
 
 def get_kline_gif_url(ts_code, type='min'):
     type_list = ['min', 'daily', 'weekly', 'monthly']
@@ -94,7 +116,7 @@ def get_big_bill_sum(ts_code: str, day: str, big_amount=1000000):
     }
     # https://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/CN_Bill.GetBillSum?symbol=sz002594&num=60&sort=ticktime&asc=0&volume=0&amount=1000000&type=0&day=2021-10-29
     url = 'https://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/CN_Bill.GetBillSum'
-    payload = {'symbol': ts_code, 'num': 60, 'sort': 'ticktime', 'asc': 0, 'volume': 0, 'amount': amount, 'type': 0,
+    payload = {'symbol': ts_code, 'num': 60, 'sort': 'ticktime', 'asc': 0, 'volume': 0, 'amount': big_amount, 'type': 0,
                'day': day}
     result = requests.get(url, payload).text
     if result == '[]':
@@ -106,11 +128,5 @@ if __name__ == '__main__':
     # print(get_realtime_detail('sz002594'))
     # print(get_realtime_detail('sh000001'))
     # print(get_realtime_simple('sz002594'))
-    # print(stock_code_adjust('比亚迪', format_type='tushare'))
-    result = utils.session.execute(
-        "SELECT trade_date FROM `daily` WHERE ts_code='002594.SZ' and trade_date>='20120105' ORDER BY trade_date").fetchall()
-    i = 1
-    for day in result:
-        print(day[0], i, "/", len(result), round(i / len(result), 2), '%')
-        i += 1
-        download_price_his('sz002594', startdate=day[0], enddate=day[0])
+    print(format_stock_code('比亚迪', format_type='tushare'))
+
