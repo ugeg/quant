@@ -1,5 +1,6 @@
 import re
 
+import pandas as pd
 from pandas import DataFrame
 
 import utils
@@ -55,3 +56,14 @@ def save(df: DataFrame, table_name, db_type='mysql'):
             print(e)
     else:
         print("Method [save] not implement! Please check")
+
+
+def read(query_sql: str):
+    return pd.read_sql_query(query_sql, utils.mysql_engine, parse_dates={"trade_date": "%Y%m%d"},index_col="trade_date")
+    # return pd.read_sql_query(query_sql, utils.mysql_engine)
+
+
+if __name__ == '__main__':
+    sql = "select trade_date as datetime,open,high,low,close,vol as volume,0 from daily where ts_code='002594.SZ'"
+    df = read(sql)
+    print(df)
