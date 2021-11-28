@@ -9,7 +9,7 @@ from utils.logging_util import count_time
 from utils.global_operator import save
 pro = ts.pro_api(utils.conf.tushare_token)
 mysql_connector = utils.mysql_connector
-session = utils.Session
+session = utils.session
 
 
 @count_time
@@ -69,6 +69,7 @@ def get_daily(ts_code='', trade_date='', start_date='', end_date=''):
 @count_time
 def download_stock_daily_delta():
     daily_table_name = "daily"
+    # start_day = session.execute('select max(trade_date) as trade_date from daily').scalar()
     start_day = session.query(func.max(Daily.trade_date)).scalar()
     if start_day:
         start_day = (datetime.datetime.strptime(start_day, "%Y%m%d") + datetime.timedelta(days=1)).strftime("%Y%m%d")
@@ -89,7 +90,7 @@ def download_stock_daily_delta():
 
 
 if __name__ == '__main__':
-    # download_basic_to_mysql('stock_basic')
+    download_basic_to_mysql('stock_basic')
     # download_basic_to_mysql('index_basic')
-    download_index_daily_to_mysql()
-    # download_stock_daily_delta()
+    # download_index_daily_to_mysql()
+    download_stock_daily_delta()
