@@ -252,13 +252,12 @@ if __name__ == '__main__':
     # 回测期间
     start = datetime(2021, 1, 1)
     end = datetime(2021, 12, 1)
-    use_direct_data = True
+    use_direct_data = False
     for socket in socket_list:
+        df = utils.backtrader_util.get_stock_daily_data(socket, '20200628')
         if use_direct_data:
-            df = utils.backtrader_util.get_stock_daily_direct_data(socket, '20200628')
             data = bt.feeds.PandasDirectData(dataname=df, fromdate=start, todate=end, datetime=0, openinterest=-1)
         else:
-            df = utils.backtrader_util.get_stock_daily_data(socket, '20200628')
             data = bt.feeds.PandasData(dataname=df, fromdate=start, todate=end, openinterest=None)
     cerebro.adddata(data, name=socket)
     cerebro.addanalyzer(bt.analyzers.Returns)

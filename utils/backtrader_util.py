@@ -80,20 +80,6 @@ def get_stock_daily_data(code, start_date, end_date=None):
     return df
 
 
-def get_stock_daily_direct_data(code, start_date, end_date=None):
-    if not end_date:
-        end_date = time_util.date_to_str()
-    start_date = time_util.format_date(start_date)
-    end_date = time_util.format_date(end_date)
-    socket_code = global_operator.format_stock_code(code)
-    df = global_operator.read(
-        "select trade_date,open,high,low,close,vol as volume from daily where ts_code='{}' and trade_date>='{}' and trade_date<{}".format(
-            socket_code, start_date, end_date))
-    df['trade_date'] = pd.to_datetime(df['trade_date'])
-    df.set_index('trade_date', inplace=True)
-    return df
-
-
 def plot_stock(code, title, start, end=None):
     dd = get_stock_daily_data(code, start, end)
     trade_date_count = len(dd.index)
