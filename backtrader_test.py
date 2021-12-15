@@ -252,14 +252,15 @@ if __name__ == '__main__':
     # 回测期间
     start = datetime(2021, 1, 1)
     end = datetime(2021, 12, 1)
+    use_direct_data = True
     for socket in socket_list:
-        # df = utils.backtrader_util.get_stock_daily_data(socket, '20200628')
-        # data = bt.feeds.PandasData(dataname=df, fromdate=start, todate=end, datetime='trade_date', open=1, high=2,
-        #                            low=3, close=4, volume=5, openinterest=-1)
-        df = utils.backtrader_util.get_stock_daily_direct_data(socket, '20200628')
-        data = bt.feeds.PandasDirectData(dataname=df, fromdate=start, todate=end, datetime=0, open=1, high=2,
-                                         low=3, close=4, volume=5, openinterest=-1)
-        cerebro.adddata(data, name=socket)
+        if use_direct_data:
+            df = utils.backtrader_util.get_stock_daily_direct_data(socket, '20200628')
+            data = bt.feeds.PandasDirectData(dataname=df, fromdate=start, todate=end, datetime=0, openinterest=-1)
+        else:
+            df = utils.backtrader_util.get_stock_daily_data(socket, '20200628')
+            data = bt.feeds.PandasData(dataname=df, fromdate=start, todate=end, openinterest=None)
+    cerebro.adddata(data, name=socket)
     cerebro.addanalyzer(bt.analyzers.Returns)
     # 策略执行前的资金
     print('Starting Portfolio Value: %.2f' % cerebro.broker.getvalue())
