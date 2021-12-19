@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 import backtrader as bt
 import pandas as pd
 from matplotlib import pyplot as plt
@@ -11,9 +13,15 @@ mpl.rcParams['axes.unicode_minus'] = False
 
 
 class StampDutyCommission(bt.CommInfoBase):
+    """
+    佣金及印花税
+    """
     params = (
         ("stamp_duty", 0.001),  # 印花税
-        ("percabs", True)  # 是否为股票模式
+        ('commission', 0.00015),  # 佣金率
+        ("percabs", True),  # 是否为股票模式
+        ('stocklike', True),
+        ('commtype', bt.CommInfoBase.COMM_PERC),
     )
 
     def _getcommission(self, size, price, pseudoexec):
@@ -24,6 +32,50 @@ class StampDutyCommission(bt.CommInfoBase):
         else:
             duty = round(size * price * self.p.stamp_duty, 2)
             return round(-comm - duty, 2)
+
+
+class ASharesSizer(bt.sizers.PercentSizerInt):
+    """
+    A股买卖最少100股
+    """
+    params = (
+        ('percents', 100),
+    )
+    def _getsizing(self, comminfo, cash, data, isbuy):
+        position = self.broker.getposition(data)
+        current_prize = data.open[0]
+        if not position:
+            size = cash * (self.params.percents / 100) // (current_prize * 100) * 100
+            if size == 0:
+                if cash > data.close[0] * 100:
+                    size = 100
+                else:
+                    print("cash :", cash, "not enough for prize:", current_prize)
+        else:
+            size = position.size
+
+        if self.p.retint:
+            size = int(size)
+
+        return size
+
+
+class TotalValue(bt.Analyzer):
+    """
+    记录每天账户资产
+    """
+    def __init__(self):
+        self.rets = OrderedDict()
+
+    def start(self):
+        super(TotalValue, self).start()
+
+    def next(self):
+        super(TotalValue, self).next()
+        self.rets[self.datas[0].datetime.datetime()] = self.strategy.broker.getvalue()
+
+    def get_analysis(self):
+        return self.rets
 
 
 class StrategyDefault(bt.Strategy):
@@ -43,13 +95,13 @@ class StrategyDefault(bt.Strategy):
         if order.status in [order.Completed]:
             if order.isbuy():
                 self.log(
-                    f'买入:{list(self.dnames.keys())[0]} 价格:{order.executed.price},成本:{order.executed.value},手续费:{order.executed.comm}')
+                    f'买入:{order.data._name} 价格:{order.executed.price},成本:{order.executed.value},手续费:{order.executed.comm}')
                 self.buyprice = order.executed.price
                 self.buycomm = order.executed.comm
             else:
                 self.log(
-                    f'卖出:{list(self.dnames.keys())[0]} 价格：{order.executed.price},成本: {order.executed.value},手续费{order.executed.comm}')
-            self.bar_executed = len(self)
+                    f'卖出:{order.data._name} 价格：{order.executed.price},成本: {order.executed.value},手续费{order.executed.comm}')
+            # self.bar_executed = len(self)
         # 如果指令取消/交易失败, 报告结果
         elif order.status in [order.Canceled, order.Margin, order.Rejected]:
             self.log('交易失败')
@@ -59,7 +111,7 @@ class StrategyDefault(bt.Strategy):
     def notify_trade(self, trade):
         if trade.isclosed:
             self.log(
-                f'结算 {list(self.dnames.keys())[0]} 毛收益 {trade.pnl:.2f}, 净收益 {trade.pnlcomm:.2f},手续费{trade.commission:.2f}')
+                f'结算 {trade.data._name} 毛收益 {trade.pnl:.2f}, 净收益 {trade.pnlcomm:.2f},手续费{trade.commission:.2f}')
 
     # 回测结束后输出结果（可省略，默认输出结果）
     def stop(self):

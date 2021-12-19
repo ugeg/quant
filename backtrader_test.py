@@ -1,5 +1,5 @@
 import time
-from datetime import datetime
+import datetime
 
 import pandas as pd
 
@@ -12,6 +12,7 @@ from pylab import mpl
 
 mpl.rcParams['font.sans-serif'] = ['SimHei']
 mpl.rcParams['axes.unicode_minus'] = False
+plt.switch_backend('TkAgg')
 
 
 # import matplotlib as mpl
@@ -49,13 +50,13 @@ class MyStrategy(utils.backtrader_util.StrategyDefault):
             if self.dataclose[0] > self.sma[0]:
                 self.log('BUY CREATE, %.2f' % self.dataclose[0])
                 # 执行买入
-                self.order = self.buy()
+                self.order = self.buy(data=self.datas[0])
         else:
             # 执行卖出条件判断：收盘价格跌破15日均线
             if self.dataclose[0] < self.sma[0]:
                 self.log('SELL CREATE, %.2f' % self.dataclose[0])
                 # 执行卖出
-                self.order = self.sell()
+                self.order = self.sell(self.datas[0])
 
 
 class MyStrategy1(utils.backtrader_util.StrategyDefault):
@@ -64,7 +65,7 @@ class MyStrategy1(utils.backtrader_util.StrategyDefault):
 
     def __init__(self):
         # 指定价格序列
-        self.dataclose = self.datas[0].close
+        # self.dataclose = self.datas[0].close
 
         # 初始化交易指令、买卖价格和手续费
         self.order = None
@@ -78,22 +79,22 @@ class MyStrategy1(utils.backtrader_util.StrategyDefault):
     # 策略核心，根据条件执行买卖交易指令（必选）
     def next(self):
         # 记录收盘价
-        # self.log(f'收盘价, {dataclose[0]}')
         if self.order:  # 检查是否有指令等待执行,
             return
-        for i in range(len(self.datas)):
-            data = self.datas[i]
-            position = self.getpositions()[i]
+        for i, data in enumerate(self.datas):
+            position = self.getposition(data=data)
             name = data._name
             if not position:
                 if data.close[0] > self.sma[i][0]:
-                    self.log('BUY %s CREATE, %.2f' % (name, self.dataclose[0]))
                     # 执行买入
-                    self.order = self.buy(data)
+                    upper_price = round(data.close[0]*1.05,2)
+                    self.log('BUY %s CREATE,close_price:%.2f,upper_price:%.2f' % (name, data.close[0],upper_price))
+                    self.order = self.buy(data,exectype=bt.Order.Limit,price=upper_price,valid=bt.num2date(data.datetime[1]))
+                    # self.order = self.buy(data)
             else:
                 # 执行卖出条件判断：收盘价格跌破15日均线
                 if data.close[0] < self.sma[i][0]:
-                    self.log('SELL %s CREATE, %.2f' % (name, self.dataclose[0]))
+                    self.log('SELL %s CREATE, %.2f' % (name, data.close[0]))
                     # 执行卖出
                     self.order = self.sell(data)
 
@@ -176,54 +177,6 @@ class TestStrategy(bt.Strategy):
                 self.order = self.sell()
 
 
-class my_strategy1(bt.Strategy):
-    # 全局设定交易策略的参数
-    params = (
-        ('maperiod', 20),
-    )
-
-    def __init__(self):
-        # 指定价格序列
-        self.dataclose = self.datas[0].close
-        # 初始化交易指令、买卖价格和手续费
-        self.order = None
-        self.buyprice = None
-        self.buycomm = None
-
-        # 添加移动均线指标，内置了talib模块
-        self.sma = bt.indicators.SimpleMovingAverage(
-            self.datas[0], period=self.params.maperiod)
-
-    def next(self):
-        if self.order:  # 检查是否有指令等待执行,
-            return
-        # 检查是否持仓
-        if not self.position:  # 没有持仓
-            # 执行买入条件判断：收盘价格上涨突破20日均线
-            if self.dataclose[0] > self.sma[0]:
-                # 执行买入
-                self.order = self.buy()
-        else:
-            # 执行卖出条件判断：收盘价格跌破20日均线
-            if self.dataclose[0] < self.sma[0]:
-                # 执行卖出
-                self.order = self.sell()
-
-
-class mySizer(bt.sizers.AllInSizerInt):
-    def _getsizing(self, comminfo, cash, data, isbuy):
-        position = self.broker.getposition(data)
-        if not position:
-            size = cash * (self.params.percents / 100) // (data.close[0] * 100) * 100
-        else:
-            size = position.size
-
-        if self.p.retint:
-            size = int(size)
-
-        return size
-
-
 if __name__ == '__main__':
     # 初始化模型
     cerebro = bt.Cerebro()
@@ -231,8 +184,8 @@ if __name__ == '__main__':
     # strats = cerebro.optstrategy(
     #     TestStrategy,
     #     maperiod=range(10, 31))
-    # cerebro.addstrategy(MyStrategy1)
-    cerebro.addstrategy(TestStrategy)
+    cerebro.addstrategy(MyStrategy1)
+    # cerebro.addstrategy(TestStrategy)
     # cerebro.addstrategy(my_strategy1)
     # 设定初始资金
     cerebro.broker.setcash(100000.0)
@@ -244,34 +197,39 @@ if __name__ == '__main__':
     # cerebro.addsizer(bt.sizers.FixedSize, stake=500)
     # cerebro.addsizer(bt.sizers.PercentSizer, stake=50)
     # cerebro.addsizer(bt.sizers.AllInSizerInt, percents=95)
-    cerebro.addsizer(mySizer, percents=95)
+    cerebro.addsizer(utils.backtrader_util.ASharesSizer, percents=10)
 
-    # socket_list = ['比亚迪','紫光国微']
-    socket_list = ['比亚迪']
-    # socket_list = ['王府井',]
+    socket_list = ['比亚迪','紫光国微']
+    # socket_list = ['比亚迪']
+    # socket_list = ['紫光国微',]
     # 回测期间
-    start = datetime(2021, 1, 1)
-    end = datetime(2021, 12, 1)
+    start = datetime.datetime(2020, 6, 11)
+    end = datetime.datetime(2021, 1, 1)
     use_direct_data = False
     for socket in socket_list:
-        df = utils.backtrader_util.get_stock_daily_data(socket, '20200628')
+        df = utils.backtrader_util.get_stock_daily_data(socket, '20200101')
         if use_direct_data:
             data = bt.feeds.PandasDirectData(dataname=df, fromdate=start, todate=end, datetime=0, openinterest=-1)
         else:
             data = bt.feeds.PandasData(dataname=df, fromdate=start, todate=end, openinterest=None)
-    cerebro.adddata(data, name=socket)
+        cerebro.adddata(data, name=socket)
     cerebro.addanalyzer(bt.analyzers.Returns)
+    cerebro.addanalyzer(utils.backtrader_util.TotalValue, _name='_TotalValue')
+
     # 策略执行前的资金
     print('Starting Portfolio Value: %.2f' % cerebro.broker.getvalue())
-    results = cerebro.run(maxcpus=8)
+    results = cerebro.run(maxcpus=16)
     # 策略执行后的资金
     print('Final Portfolio Value: %.2f' % cerebro.broker.getvalue())
     # cerebro.plot(style='bar',tight=False,width=160,height=90)
     rets = results[0].analyzers.returns.get_analysis()
+    totalValue = results[0].analyzers._TotalValue.get_analysis()
     print(rets)
+    print('totalValue:',totalValue)
     # rets = results[1].analyzers.returns.get_analysis()
     # print(rets)
     # cerebro.plot(style='candlestick')
     # cerebro.plot(volume=False)
+    print('gg')
     cerebro.plot()
     # plt.show()
