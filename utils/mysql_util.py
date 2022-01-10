@@ -62,8 +62,8 @@ class MysqlConnector:
 
 if __name__ == '__main__':
     mysql_util = MysqlConnector("localhost", "jing", "123456", "quant")
-    with mysql_util.engine.connect() as conn:
-        conn.execute("truncate stock_basic")
+    # with mysql_util.engine.connect() as conn:
+    #     conn.execute("truncate stock_basic")
     print("gg")
     session = Session(mysql_util.engine)
     # query = session.query(entity.StockBasic)
@@ -71,6 +71,8 @@ if __name__ == '__main__':
     # # clause = select(entity.StockBasic)
     # print(query)
     # print(select(Daily.amount))
+    result = session.execute("select max(trade_date) as trade_date from daily").scalar()
+    print(result)
     count = session.query(func.count(entity.StockBasic.ts_code)).one()
     print(count[0])
     date_all = session.query(Daily.ts_code, func.max(Daily.trade_date)).group_by(Daily.ts_code).all()

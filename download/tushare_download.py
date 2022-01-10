@@ -55,6 +55,7 @@ def get_daily(ts_code='', trade_date='', start_date='', end_date=''):
                 df = pro.daily(ts_code=ts_code, trade_date=trade_date)
             else:
                 df = pro.daily(ts_code=ts_code, start_date=start_date, end_date=end_date)
+            return df
         except Exception as e:
             print(e)
             if e.args[0] == "type object 'object' has no attribute 'dtype'":
@@ -62,15 +63,12 @@ def get_daily(ts_code='', trade_date='', start_date='', end_date=''):
                 break
             print("ERROR: download daily data timeout")
             time.sleep(1)
-        else:
-            return df
 
 
 @count_time
-def download_stock_daily_delta():
-    daily_table_name = "daily"
-    # start_day = session.execute('select max(trade_date) as trade_date from daily').scalar()
-    start_day = session.query(func.max(Daily.trade_date)).scalar()
+def download_stock_daily_delta(table_name:str):
+    start_day = session.execute('select max(trade_date) as trade_date from {}'.format(table_name)).scalar()
+    # start_day = session.query(func.max(Daily.trade_date)).scalar()
     if start_day:
         start_day = (datetime.datetime.strptime(start_day, "%Y%m%d") + datetime.timedelta(days=1)).strftime("%Y%m%d")
     else:
@@ -83,14 +81,39 @@ def download_stock_daily_delta():
     df = pro.trade_cal(exchange='SSE', is_open='1', start_date=start_day, end_date=current_day, fields='cal_date')
     download_day_count = len(df.index)
     for i, date in enumerate(df['cal_date']):
-        daily_data_df = get_daily(trade_date=date)
-        save(daily_data_df, daily_table_name)
-        print("Downloading stock daily data:", date, "count:", len(daily_data_df.index), "\tcurrent progress:[", i + 1, "/",
+        # daily_data_df = get_daily(trade_date=date)
+
+        daily_data_df = eval("get_"+table_name)(**{"trade_date":date})
+        save(daily_data_df, table_name)
+        print("Downloading",table_name,"data:", date, "count:", len(daily_data_df.index), "\tcurrent progress:[", i + 1, "/",
               download_day_count, "]", (i + 1) * 100 // download_day_count, "%")
 
 
+def get_daily_basic(trade_date:str):
+    while 1:
+        try:
+            df = pro.daily_basic(**{
+                "ts_code": "",
+                "trade_date": trade_date,
+                "start_date": "",
+                "end_date": "",
+                "limit": "",
+                "offset": ""
+            }, fields=["ts_code","trade_date","close","turnover_rate","turnover_rate_f","volume_ratio","pe","pe_ttm","pb","ps","ps_ttm","dv_ratio","dv_ttm","total_share","float_share","free_share","total_mv","circ_mv","limit_status"])
+            return df
+        except Exception as e:
+            print(e)
+            if e.args[0] == "type object 'object' has no attribute 'dtype'":
+                print("no more data")
+                break
+            print("ERROR: download daily data timeout")
+            time.sleep(1)
+
+
 if __name__ == '__main__':
-    download_basic_to_mysql('stock_basic')
+    # download_basic_to_mysql('stock_basic')
     # download_basic_to_mysql('index_basic')
     # download_index_daily_to_mysql()
-    download_stock_daily_delta()
+    download_stock_daily_delta("daily")
+    download_stock_daily_delta("daily_basic")
+    # get_daily_basic()

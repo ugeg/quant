@@ -189,6 +189,7 @@ if __name__ == '__main__':
     # cerebro.addstrategy(my_strategy1)
     # 设定初始资金
     cerebro.broker.setcash(100000.0)
+    # cerebro.broker.set_coc(True)  # 设置以当日收盘价成交
     # 手续费
     # cerebro.broker.setcommission(0.0005)
     comminfo = utils.backtrader_util.StampDutyCommission(stamp_duty=0.001, commission=0.0005)
@@ -231,5 +232,14 @@ if __name__ == '__main__':
     # cerebro.plot(style='candlestick')
     # cerebro.plot(volume=False)
     print('gg')
-    cerebro.plot()
-    # plt.show()
+
+    from backtrader_plotting import Bokeh
+    from backtrader_plotting.schemes import Tradimo
+
+    # 其它回测代码
+    # ...
+    # 设置回测结果中不显示数据K线
+    for d in cerebro.datas:
+        d.plotinfo.plot = False
+    b = Bokeh(style='bar', plot_mode='single', scheme=Tradimo())
+    # cerebro.plot(b)

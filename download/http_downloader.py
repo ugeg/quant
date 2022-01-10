@@ -1,5 +1,6 @@
 import datetime
 import re
+import sys
 import time
 
 import pandas as pd
@@ -144,10 +145,22 @@ def get_big_bill_sum(ts_code: str, day: str, big_amount=1000000):
     url = 'https://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/CN_Bill.GetBillSum'
     payload = {'symbol': ts_code, 'num': 60, 'sort': 'ticktime', 'asc': 0, 'volume': 0, 'amount': big_amount, 'type': 0,
                'day': day}
-    result = requests.get(url, payload).text
+    get = requests.get(url, payload)
+    result = get.text
     if result == '[]':
         return None
-    return json.loads(result)[0]
+    try:
+        dict = json.loads(result)
+        return dict[0]
+    except json.decoder.JSONDecodeError:
+        print('try utf8')
+    result = get.content.decode('utf8')
+    try:
+        dict = json.loads(result)
+        return dict[0]
+    except json.decoder.JSONDecodeError:
+        print(result)
+        sys.exit(-1)
 
 
 def get_position_analysis(ts_code, src='tencent'):
@@ -189,5 +202,22 @@ def get_minute_data(ts_code, src='tencent'):
 if __name__ == '__main__':
     # print(get_realtime_detail('sz002594'))
     # print(get_realtime_detail('sh000001'))
-    print(get_minute_data('sz002594',src='tencent'))
+    sql = "SELECT ts_code FROM `daily` WHERE trade_date='20211203' and amount>100000"
+    codes = utils.global_operator.read(sql)
+    code_list = [code[1]['ts_code'] for code in codes.iterrows()]
+    for i,code in enumerate(code_list):
+        if i<96:
+            continue
+        ts_code = code[7:].lower() + code[:6]
+        print(i,ts_code)
+        list_data = []
+        for date in ['20211203','20211206','20211207','20211208','20211209','20211210','20211213','20211214','20211215','20211216','20211217']:
+            date_concat = date[:4] + '-' + date[4:6] + '-' + date[6:]
+            big_bill = get_big_bill_sum(ts_code,date_concat)
+            if big_bill:
+                list_data.append(big_bill)
+        df = pd.DataFrame(list_data)
+        utils.global_operator.save(df,'big_bill')
+        time.sleep(0.5)
+
     # print(format_stock_code('比亚迪', format_type='tushare'))

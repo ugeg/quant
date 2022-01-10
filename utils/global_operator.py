@@ -1,3 +1,4 @@
+import datetime
 import re
 
 import pandas as pd
@@ -50,7 +51,7 @@ def format_stock_code(src: str, format_type='tushare'):
 def save(df: DataFrame, table_name, db_type='mysql'):
     if db_type == 'mysql':
         try:
-            print("save", len(df.index), "record to ", table_name)
+            print(datetime.datetime.now(), "save", len(df.index), "record to ", table_name)
             df.to_sql(table_name, utils.mysql_engine, if_exists="append", index=False)
         except Exception as e:
             print(e)
