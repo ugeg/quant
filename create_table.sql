@@ -32,3 +32,13 @@ CREATE TABLE `daily` (
   `amount` float COMMENT '成交额 （千元）',
   PRIMARY KEY (`ts_code`,`trade_date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+DROP TABLE IF EXISTS `rps_indicator`;
+CREATE TABLE `rps_indicator` (
+  `ts_code` varchar(9) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,
+  `trade_date` varchar(8) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,
+  `period` int NOT NULL,
+  `increase` float DEFAULT NULL,
+  `rps` int DEFAULT NULL,
+  PRIMARY KEY (`ts_code`,`trade_date`,`period`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
