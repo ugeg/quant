@@ -61,7 +61,7 @@ def save(df: DataFrame, table_name, db_type='mysql'):
 
 def read(query_sql: str):
     # return pd.read_sql_query(query_sql, utils.mysql_engine, parse_dates={"trade_date": "%Y%m%d"},index_col="trade_date")
-    return pd.read_sql_query(query_sql, utils.mysql_engine)
+    return pd.read_sql_query(query_sql, utils.mengine)
 
 
 if __name__ == '__main__':

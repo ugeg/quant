@@ -2,11 +2,11 @@ import datetime
 import time
 
 import tushare as ts
-from sqlalchemy import func
-from utils.entity import Daily
+
 import utils
-from utils.logging_util import count_time
 from utils.global_operator import save
+from utils.logging_util import count_time
+
 pro = ts.pro_api(utils.conf.tushare_token)
 mysql_connector = utils.mysql_connector
 session = utils.session
@@ -49,24 +49,15 @@ def download_index_daily_to_mysql():
 
 
 def get_daily(ts_code='', trade_date='', start_date='', end_date=''):
-    while 1:
-        try:
-            if trade_date:
-                df = pro.daily(ts_code=ts_code, trade_date=trade_date)
-            else:
-                df = pro.daily(ts_code=ts_code, start_date=start_date, end_date=end_date)
-            return df
-        except Exception as e:
-            print(e)
-            if e.args[0] == "type object 'object' has no attribute 'dtype'":
-                print("no more data")
-                break
-            print("ERROR: download daily data timeout")
-            time.sleep(1)
+    if trade_date:
+        df = pro.daily(ts_code=ts_code, trade_date=trade_date)
+    else:
+        df = pro.daily(ts_code=ts_code, start_date=start_date, end_date=end_date)
+    return df
 
 
 @count_time
-def download_stock_daily_delta(table_name:str):
+def download_stock_daily_delta(table_name: str):
     start_day = session.execute('select max(trade_date) as trade_date from {}'.format(table_name)).scalar()
     # start_day = session.query(func.max(Daily.trade_date)).scalar()
     if start_day:
@@ -82,38 +73,56 @@ def download_stock_daily_delta(table_name:str):
     download_day_count = len(df.index)
     for i, date in enumerate(df['cal_date']):
         # daily_data_df = get_daily(trade_date=date)
-
-        daily_data_df = eval("get_"+table_name)(**{"trade_date":date})
+        daily_data_df = loop_until_success("get_" + table_name, **{"trade_date": date})
         save(daily_data_df, table_name)
-        print("Downloading",table_name,"data:", date, "count:", len(daily_data_df.index), "\tcurrent progress:[", i + 1, "/",
+        print("Downloading", table_name, "data:", date, "count:", len(daily_data_df.index),
+              "\tcurrent progress:[", i + 1, "/",
               download_day_count, "]", (i + 1) * 100 // download_day_count, "%")
 
 
-def get_daily_basic(trade_date:str):
+def loop_until_success(fun_name, **kwargs):
     while 1:
         try:
-            df = pro.daily_basic(**{
-                "ts_code": "",
-                "trade_date": trade_date,
-                "start_date": "",
-                "end_date": "",
-                "limit": "",
-                "offset": ""
-            }, fields=["ts_code","trade_date","close","turnover_rate","turnover_rate_f","volume_ratio","pe","pe_ttm","pb","ps","ps_ttm","dv_ratio","dv_ttm","total_share","float_share","free_share","total_mv","circ_mv","limit_status"])
-            return df
+            return eval(fun_name)(**kwargs)
         except Exception as e:
             print(e)
             if e.args[0] == "type object 'object' has no attribute 'dtype'":
                 print("no more data")
                 break
-            print("ERROR: download daily data timeout")
+            print("ERROR: exec function:", fun_name, "failed")
             time.sleep(1)
+
+
+def get_daily_basic(trade_date: str):
+    df = pro.daily_basic(**{
+        "ts_code": "",
+        "trade_date": trade_date,
+        "start_date": "",
+        "end_date": "",
+        "limit": "",
+        "offset": ""
+    }, fields=["ts_code", "trade_date", "close", "turnover_rate", "turnover_rate_f", "volume_ratio", "pe",
+               "pe_ttm", "pb", "ps", "ps_ttm", "dv_ratio", "dv_ttm", "total_share", "float_share", "free_share",
+               "total_mv", "circ_mv", "limit_status"])
+    return df
+
+
+def download_trade_cal():
+    '''下载交易日历'''
+    df = pro.trade_cal(**{
+    }, fields=[
+        "exchange", "cal_date", "is_open", "pretrade_date"
+    ])
+    save(df, "trade_cal")
 
 
 if __name__ == '__main__':
     # download_basic_to_mysql('stock_basic')
     # download_basic_to_mysql('index_basic')
     # download_index_daily_to_mysql()
+
     download_stock_daily_delta("daily")
     download_stock_daily_delta("daily_basic")
+    # download_trade_cal()
     # get_daily_basic()
+    # df = utils.global_operator.read("select trade_date,open,high,low,close,vol as volume from daily where ts_code='002049.SZ' and trade_date>'20200101'")
