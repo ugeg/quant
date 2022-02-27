@@ -21,7 +21,6 @@ def load_code2name(session):
         except Exception as e:
             print(e)
 
-
 def format_stock_code(src: str, format_type='tushare'):
     type_list = ['tushare', 'sina', 'name', 'code']
     if format_type not in type_list:
@@ -63,8 +62,30 @@ def read(query_sql: str):
     # return pd.read_sql_query(query_sql, utils.mysql_engine, parse_dates={"trade_date": "%Y%m%d"},index_col="trade_date")
     return pd.read_sql_query(query_sql, utils.mysql_engine)
 
+def get_last_trade_date(date:str=None):
+    sql = "SELECT max(cal_date) FROM trade_cal WHERE cal_date<=DATE_FORMAT(CURDATE(),'%Y%m%d') and is_open=1"
+    if date:
+        sql = sql+" AND cal_date<="+date
+    df = pd.read_sql_query(sql,utils.mysql_engine)
+    return df.iloc[0,0]
+def get_code_list(date='20220222'):
+    # 默认2010年开始回测
+    dd = read("SELECT * FROM `daily_basic` WHERE trade_date='{}'".format(date))
+    # 收盘价小于100
+    x1 = dd.close < 100
+    # 流通市值低于300亿大于50亿
+    x2 = dd.circ_mv > 500000
+    x3 = dd.circ_mv < 3000000
+    # 市盈率低于80
+    x4 = dd.pe_ttm < 80
+    # 股息率大于2%
+    x5 = dd.dv_ttm > 3
+    # 换手率大于1
+    x6 = dd.turnover_rate_f>1
+    x = x1 & x2 & x3 & x4 & x5 & x6
+    stock_list = dd[x].ts_code.values
+    return stock_list
+
 
 if __name__ == '__main__':
-    sql = "select trade_date as datetime,open,high,low,close,vol as volume,0 from daily where ts_code='002594.SZ'"
-    df = read(sql)
-    print(df)
+    print(get_last_trade_date())

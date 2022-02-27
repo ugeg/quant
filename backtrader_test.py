@@ -60,7 +60,7 @@ class MyStrategy(utils.backtrader_util.StrategyDefault):
 
 
 class MyStrategy1(utils.backtrader_util.StrategyDefault):
-    params = (('maperiod', 15),
+    params = (('maperiod', 20),
               ('printlog', True),)
 
     def __init__(self):
@@ -97,7 +97,50 @@ class MyStrategy1(utils.backtrader_util.StrategyDefault):
                     self.log('SELL %s CREATE, %.2f' % (name, data.close[0]))
                     # 执行卖出
                     self.order = self.sell(data)
+class MyStrategy2(utils.backtrader_util.StrategyDefault):
+    params = (('maperiod', 15),
+              ('printlog', True),)
 
+    def __init__(self):
+        # 指定价格序列
+        # self.dataclose = self.datas[0].close
+
+        # 初始化交易指令、买卖价格和手续费
+        self.order = None
+        self.buyprice = None
+        self.buycomm = None
+
+        # 添加移动均线指标
+        self.sma = [bt.indicators.SimpleMovingAverage(
+            self.datas[i], period=self.params.maperiod) for i in range(len(self.datas))]
+
+    # 策略核心，根据条件执行买卖交易指令（必选）
+    def next(self):
+        # 记录收盘价
+        if self.order:  # 检查是否有指令等待执行,
+            return
+        for i, data in enumerate(self.datas):
+            position = self.getposition(data=data)
+            name = data._name
+            if not position:
+                buy_mark = True
+                for j in range(10):
+                    if data.rps[-j]<80 or data.close[-j]>data.close[-j-2]*1.1:
+                        buy_mark=False
+                        break
+                if buy_mark:
+                    print('data.close[-10]',data.close[-10])
+                    # 执行买入
+                    upper_price = round(data.close[0]*1.05,2)
+                    self.log('BUY %s CREATE,close_price:%.2f,upper_price:%.2f' % (name, data.close[0],upper_price))
+                    self.order = self.buy(data,exectype=bt.Order.Limit,price=upper_price,valid=bt.num2date(data.datetime[1]))
+                    # self.order = self.buy(data)
+            else:
+                # 执行卖出条件判断：收盘价格跌破15日均线
+                if  data.rps[0]<80:
+                    self.log('SELL %s CREATE, %.2f' % (name, data.close[0]))
+                    # 执行卖出
+                    self.order = self.sell(data)
 
 class TestStrategy(bt.Strategy):
 
@@ -176,7 +219,11 @@ class TestStrategy(bt.Strategy):
                 # Keep track of the created order to avoid a 2nd order
                 self.order = self.sell()
 
-
+class PandasData_Extend(bt.feeds.PandasData):
+    lines = ('rps',)
+    params = (
+        ('rps', -1),
+    )
 if __name__ == '__main__':
     # 初始化模型
     cerebro = bt.Cerebro()
@@ -184,7 +231,7 @@ if __name__ == '__main__':
     # strats = cerebro.optstrategy(
     #     TestStrategy,
     #     maperiod=range(10, 31))
-    cerebro.addstrategy(MyStrategy1)
+    cerebro.addstrategy(MyStrategy2)
     # cerebro.addstrategy(TestStrategy)
     # cerebro.addstrategy(my_strategy1)
     # 设定初始资金
@@ -197,22 +244,24 @@ if __name__ == '__main__':
     # 每次交易买入的股数
     # cerebro.addsizer(bt.sizers.FixedSize, stake=500)
     # cerebro.addsizer(bt.sizers.PercentSizer, stake=50)
-    # cerebro.addsizer(bt.sizers.AllInSizerInt, percents=95)
-    cerebro.addsizer(utils.backtrader_util.ASharesSizer, percents=10)
+    cerebro.addsizer(bt.sizers.AllInSizerInt, percents=95)
+    # cerebro.addsizer(utils.backtrader_util.ASharesSizer, percents=10)
 
-    socket_list = ['比亚迪','紫光国微']
-    # socket_list = ['比亚迪']
+    # socket_list = ['比亚迪','紫光国微']
+    socket_list = ['海星股份']
     # socket_list = ['紫光国微',]
     # 回测期间
-    start = datetime.datetime(2020, 6, 11)
-    end = datetime.datetime(2021, 1, 1)
+    start = datetime.datetime(2020, 1, 1)
+    end = datetime.datetime(2022, 2, 21)
     use_direct_data = False
     for socket in socket_list:
-        df = utils.backtrader_util.get_stock_daily_data(socket, '20200101')
+        # df = utils.backtrader_util.get_stock_daily_data(socket, '20200101')
+        df = utils.backtrader_util.get_stock_daily_data_with_rps(socket, '20200101')
         if use_direct_data:
             data = bt.feeds.PandasDirectData(dataname=df, fromdate=start, todate=end, datetime=0, openinterest=-1)
         else:
-            data = bt.feeds.PandasData(dataname=df, fromdate=start, todate=end, openinterest=None)
+            # data = bt.feeds.PandasData(dataname=df, fromdate=start, todate=end, openinterest=None)
+            data = PandasData_Extend(dataname=df, fromdate=start, todate=end, openinterest=None)
         cerebro.adddata(data, name=socket)
     cerebro.addanalyzer(bt.analyzers.Returns)
     cerebro.addanalyzer(utils.backtrader_util.TotalValue, _name='_TotalValue')

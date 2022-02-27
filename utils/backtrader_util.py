@@ -25,13 +25,13 @@ class StampDutyCommission(bt.CommInfoBase):
     )
 
     def _getcommission(self, size, price, pseudoexec):
-        comm = round(size * price * self.p.commission, 2)
+        comm = round(abs(size) * price * self.p.commission, 2)
         comm = max(comm, 5)
         if size > 0:
             return comm
         else:
-            duty = round(size * price * self.p.stamp_duty, 2)
-            return round(-comm - duty, 2)
+            duty = round(-size * price * self.p.stamp_duty, 2)
+            return round(comm + duty, 2)
 
 
 class ASharesSizer(bt.sizers.PercentSizerInt):
@@ -104,7 +104,7 @@ class StrategyDefault(bt.Strategy):
             # self.bar_executed = len(self)
         # 如果指令取消/交易失败, 报告结果
         elif order.status in [order.Canceled, order.Margin, order.Rejected]:
-            self.log('交易失败')
+            self.log(order.data._name+'交易失败\t'+order.Status[order.status])
         self.order = None
 
     # 记录交易收益情况（可省略，默认不输出结果）
@@ -127,6 +127,29 @@ def get_stock_daily_data(code, start_date, end_date=None):
     df = global_operator.read(
         "select trade_date,open,high,low,close,vol as volume from daily where ts_code='{}' and trade_date>='{}' and trade_date<{}".format(
             socket_code, start_date, end_date))
+    df['trade_date'] = pd.to_datetime(df['trade_date'])
+    df.set_index('trade_date', inplace=True)
+    return df
+def get_stock_daily_data(sql:str,code, start_date, end_date=None):
+    if not sql:
+        sql = "select trade_date,open,high,low,close,vol as volume from daily where ts_code='{}' and trade_date>='{}' and trade_date<{}"
+    if not end_date:
+        end_date = time_util.date_to_str()
+    start_date = time_util.format_date(start_date)
+    end_date = time_util.format_date(end_date)
+    socket_code = global_operator.format_stock_code(code)
+    df = global_operator.read(sql.format(socket_code, start_date, end_date))
+    df['trade_date'] = pd.to_datetime(df['trade_date'])
+    df.set_index('trade_date', inplace=True)
+    return df
+def get_stock_daily_data_with_rps(code, start_date, end_date=None):
+    sql = "select a.trade_date,open,high,low,close,volume,b.rps from (select ts_code,trade_date,open,high,low,close,vol as volume from daily where ts_code='{}' and trade_date>='{}' and trade_date<{})a left join rps_indicator b on a.trade_date=b.trade_date and a.ts_code=b.ts_code"
+    if not end_date:
+        end_date = time_util.date_to_str()
+    start_date = time_util.format_date(start_date)
+    end_date = time_util.format_date(end_date)
+    socket_code = global_operator.format_stock_code(code)
+    df = global_operator.read(sql.format(socket_code, start_date, end_date))
     df['trade_date'] = pd.to_datetime(df['trade_date'])
     df.set_index('trade_date', inplace=True)
     return df
