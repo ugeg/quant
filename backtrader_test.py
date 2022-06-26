@@ -87,9 +87,10 @@ class MyStrategy1(utils.backtrader_util.StrategyDefault):
             if not position:
                 if data.close[0] > self.sma[i][0]:
                     # 执行买入
-                    upper_price = round(data.close[0]*1.05,2)
-                    self.log('BUY %s CREATE,close_price:%.2f,upper_price:%.2f' % (name, data.close[0],upper_price))
-                    self.order = self.buy(data,exectype=bt.Order.Limit,price=upper_price,valid=bt.num2date(data.datetime[1]))
+                    upper_price = round(data.close[0] * 1.05, 2)
+                    self.log('BUY %s CREATE,close_price:%.2f,upper_price:%.2f' % (name, data.close[0], upper_price))
+                    self.order = self.buy(data, exectype=bt.Order.Limit, price=upper_price,
+                                          valid=bt.num2date(data.datetime[1]))
                     # self.order = self.buy(data)
             else:
                 # 执行卖出条件判断：收盘价格跌破15日均线
@@ -97,8 +98,10 @@ class MyStrategy1(utils.backtrader_util.StrategyDefault):
                     self.log('SELL %s CREATE, %.2f' % (name, data.close[0]))
                     # 执行卖出
                     self.order = self.sell(data)
+
+
 class MyStrategy2(utils.backtrader_util.StrategyDefault):
-    params = (('maperiod', 15),
+    params = (('maperiod', 30),
               ('printlog', True),)
 
     def __init__(self):
@@ -113,6 +116,8 @@ class MyStrategy2(utils.backtrader_util.StrategyDefault):
         # 添加移动均线指标
         self.sma = [bt.indicators.SimpleMovingAverage(
             self.datas[i], period=self.params.maperiod) for i in range(len(self.datas))]
+        self.sma5 = [bt.indicators.SimpleMovingAverage(
+            self.datas[i], period=5) for i in range(len(self.datas))]
 
     # 策略核心，根据条件执行买卖交易指令（必选）
     def next(self):
@@ -125,22 +130,24 @@ class MyStrategy2(utils.backtrader_util.StrategyDefault):
             if not position:
                 buy_mark = True
                 for j in range(10):
-                    if data.rps[-j]<80 or data.close[-j]>data.close[-j-2]*1.1:
-                        buy_mark=False
+                    if data.rps[-j] < 80 or data.close[-j] > data.close[-j - 2] * 1.1:
+                        buy_mark = False
                         break
                 if buy_mark:
-                    print('data.close[-10]',data.close[-10])
+                    print('data.close[-10]', data.close[-10])
                     # 执行买入
-                    upper_price = round(data.close[0]*1.05,2)
-                    self.log('BUY %s CREATE,close_price:%.2f,upper_price:%.2f' % (name, data.close[0],upper_price))
-                    self.order = self.buy(data,exectype=bt.Order.Limit,price=upper_price,valid=bt.num2date(data.datetime[1]))
+                    upper_price = round(data.close[0] * 1.05, 2)
+                    self.log('BUY %s CREATE,close_price:%.2f,upper_price:%.2f' % (name, data.close[0], upper_price))
+                    self.order = self.buy(data, exectype=bt.Order.Limit, price=upper_price,
+                                          valid=bt.num2date(data.datetime[1]))
                     # self.order = self.buy(data)
             else:
                 # 执行卖出条件判断：收盘价格跌破15日均线
-                if  data.rps[0]<80:
+                if data.rps[0] < 80:
                     self.log('SELL %s CREATE, %.2f' % (name, data.close[0]))
                     # 执行卖出
                     self.order = self.sell(data)
+
 
 class TestStrategy(bt.Strategy):
 
@@ -219,11 +226,14 @@ class TestStrategy(bt.Strategy):
                 # Keep track of the created order to avoid a 2nd order
                 self.order = self.sell()
 
+
 class PandasData_Extend(bt.feeds.PandasData):
     lines = ('rps',)
     params = (
         ('rps', -1),
     )
+
+
 if __name__ == '__main__':
     # 初始化模型
     cerebro = bt.Cerebro()
@@ -248,8 +258,8 @@ if __name__ == '__main__':
     # cerebro.addsizer(utils.backtrader_util.ASharesSizer, percents=10)
 
     # socket_list = ['比亚迪','紫光国微']
-    socket_list = ['海星股份']
-    # socket_list = ['紫光国微',]
+    # socket_list = ['海星股份']
+    socket_list = ['紫光国微',]
     # 回测期间
     start = datetime.datetime(2020, 1, 1)
     end = datetime.datetime(2022, 2, 21)
@@ -268,27 +278,34 @@ if __name__ == '__main__':
 
     # 策略执行前的资金
     print('Starting Portfolio Value: %.2f' % cerebro.broker.getvalue())
-    results = cerebro.run(maxcpus=16)
+    results = cerebro.run(maxcpus=16,optreturn=True)
     # 策略执行后的资金
     print('Final Portfolio Value: %.2f' % cerebro.broker.getvalue())
     # cerebro.plot(style='bar',tight=False,width=160,height=90)
     rets = results[0].analyzers.returns.get_analysis()
     totalValue = results[0].analyzers._TotalValue.get_analysis()
     print(rets)
-    print('totalValue:',totalValue)
+    print('totalValue:', totalValue)
     # rets = results[1].analyzers.returns.get_analysis()
     # print(rets)
     # cerebro.plot(style='candlestick')
+    # cerebro.plot()
     # cerebro.plot(volume=False)
     print('gg')
 
-    from backtrader_plotting import Bokeh
+    from backtrader_plotting import Bokeh, OptBrowser
     from backtrader_plotting.schemes import Tradimo
 
     # 其它回测代码
     # ...
     # 设置回测结果中不显示数据K线
-    for d in cerebro.datas:
-        d.plotinfo.plot = False
-    b = Bokeh(style='bar', plot_mode='single', scheme=Tradimo())
-    # cerebro.plot(b)
+    # for d in cerebro.datas:
+    #     d.plotinfo.plot = False
+    # b = Bokeh(style='bar', plot_mode='single', scheme=Tradimo())
+    # b = Bokeh(style='bar', plot_mode='single', scheme=Tradimo(),barup = "#FC5D45",bardown='#28FF28')
+    red = '#FC5D45'
+    green = '#28FF28'
+    b = Bokeh(style='bar', plot_mode='single', scheme=Tradimo(),
+              barup=red, barup_wick=red, barup_outline=red,volup=red,
+              bardown=green, bardown_wick=green, bardown_outline=green,voldown=green)
+    cerebro.plot(b)
