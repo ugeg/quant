@@ -9,7 +9,9 @@ from utils.logging_util import count_time
 def RPS_indicator(period: int = 250):
     table_name = 'rps_indicator'
     start_day = session.execute('select max(trade_date) as trade_date from {}'.format(table_name)).scalar()
-    trade_cal_sql = "SELECT cal_date FROM trade_cal WHERE '19940101'<cal_date and cal_date<=DATE_FORMAT(CURDATE(),'%Y%m%d') and is_open=1 ORDER BY cal_date"
+    if start_day is None:
+        start_day = '20060101'
+    trade_cal_sql = "SELECT cal_date FROM trade_cal WHERE '20060101'<cal_date and cal_date<=DATE_FORMAT(CURDATE(),'%%Y%%m%%d') and is_open=1 ORDER BY cal_date"
     df1 = global_operator.read(trade_cal_sql)
 
     df = pd.concat([df1, df1.shift(period)], axis=1).dropna()

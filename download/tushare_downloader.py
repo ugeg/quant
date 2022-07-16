@@ -58,12 +58,17 @@ def get_daily(ts_code='', trade_date='', start_date='', end_date=''):
 
 @count_time
 def download_stock_daily_delta(table_name: str):
-    start_day = session.execute('select max(trade_date) as trade_date from {}'.format(table_name)).scalar()
+    # 表不存在时
+    try:
+        start_day = session.execute('select max(trade_date) as trade_date from {}'.format(table_name)).scalar()
+    except Exception as e:
+        print(e)
+        start_day = '20070101'
     # start_day = session.query(func.max(Daily.trade_date)).scalar()
     if start_day:
         start_day = (datetime.datetime.strptime(start_day, "%Y%m%d") + datetime.timedelta(days=1)).strftime("%Y%m%d")
     else:
-        start_day = '19940101'
+        start_day = '20070101'
     current_time = datetime.datetime.now()
     if current_time.hour > 15:
         current_day = current_time.strftime("%Y%m%d")
@@ -78,6 +83,7 @@ def download_stock_daily_delta(table_name: str):
         print("Downloading", table_name, "data:", date, "count:", len(daily_data_df.index),
               "\tcurrent progress:[", i + 1, "/",
               download_day_count, "]", (i + 1) * 100 // download_day_count, "%")
+        time.sleep(0.5)
 
 
 def loop_until_success(fun_name, **kwargs):
@@ -105,7 +111,20 @@ def get_daily_basic(trade_date: str):
                "pe_ttm", "pb", "ps", "ps_ttm", "dv_ratio", "dv_ttm", "total_share", "float_share", "free_share",
                "total_mv", "circ_mv", "limit_status"])
     return df
-
+def get_adj_factor(trade_date: str):
+    df = pro.adj_factor(**{
+        "ts_code": "",
+        "trade_date": trade_date,
+        "start_date": "",
+        "end_date": "",
+        "limit": "",
+        "offset": ""
+    }, fields=[
+        "ts_code",
+        "trade_date",
+        "adj_factor"
+    ])
+    return df
 
 def download_trade_cal():
     '''下载交易日历'''
@@ -117,12 +136,13 @@ def download_trade_cal():
 
 
 if __name__ == '__main__':
+    print("start")
     # download_basic_to_mysql('stock_basic')
     # download_basic_to_mysql('index_basic')
     # download_index_daily_to_mysql()
-
-    download_stock_daily_delta("daily")
+    # download_stock_daily_delta("daily")
     download_stock_daily_delta("daily_basic")
+    download_stock_daily_delta("adj_factor")
     # download_trade_cal()
     # get_daily_basic()
     # df = utils.global_operator.read("select trade_date,open,high,low,close,vol as volume from daily where ts_code='002049.SZ' and trade_date>'20200101'")
