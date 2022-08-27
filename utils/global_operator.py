@@ -18,6 +18,7 @@ def load_code2name(session):
             result = session.execute('select ts_code,name from stock_basic').fetchall()
             code2name = dict([(a, b) for a, b in result])
             name2code = dict([(b, a) for a, b in result])
+            print("code2name加载完成")
         except Exception as e:
             print(e)
 

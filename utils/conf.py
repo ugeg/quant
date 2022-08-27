@@ -37,6 +37,7 @@ def init_config():
                                mysql.get("db"))
     tushare = root_conf.get("tushare")
     tushare_token = tushare.get("token")
+    print("配置文件读取完成")
 
 
 def load_yaml_config(file_path: str):

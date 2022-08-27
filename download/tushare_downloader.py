@@ -111,6 +111,8 @@ def get_daily_basic(trade_date: str):
                "pe_ttm", "pb", "ps", "ps_ttm", "dv_ratio", "dv_ttm", "total_share", "float_share", "free_share",
                "total_mv", "circ_mv", "limit_status"])
     return df
+
+
 def get_adj_factor(trade_date: str):
     df = pro.adj_factor(**{
         "ts_code": "",
@@ -126,6 +128,27 @@ def get_adj_factor(trade_date: str):
     ])
     return df
 
+
+def download_stk_holdernumber():
+    """获取上市公司股东户数数据"""
+    for year in range(2016, 2023):
+        start_date = str(year) + '0101'
+        end_date = str(year + 1) + '0101'
+        offset = 0
+        while 1:
+            print("start_date", start_date, "offset", offset)
+            df = pro.stk_holdernumber(
+                **{"ts_code": "", "enddate": "", "start_date": start_date, "end_date": end_date, "limit": 3000,
+                   "offset": offset
+                   }, fields=["ts_code", "ann_date", "end_date", "holder_num", "holder_nums"])
+            save(df, "stk_holdernumber_tmp")
+            session.execute("replace into stk_holdernumber SELECT * from stk_holdernumber_tmp")
+            session.execute("drop table stk_holdernumber_tmp")
+            if len(df) < 3000:
+                break
+            offset += 3000
+
+
 def download_trade_cal():
     '''下载交易日历'''
     df = pro.trade_cal(**{
@@ -136,13 +159,15 @@ def download_trade_cal():
 
 
 if __name__ == '__main__':
-    print("start")
+    print("数据更新开始")
     # download_basic_to_mysql('stock_basic')
     # download_basic_to_mysql('index_basic')
     # download_index_daily_to_mysql()
-    # download_stock_daily_delta("daily")
+
+    download_stock_daily_delta("daily")
     download_stock_daily_delta("daily_basic")
     download_stock_daily_delta("adj_factor")
+    print("数据更新完成")
     # download_trade_cal()
     # get_daily_basic()
     # df = utils.global_operator.read("select trade_date,open,high,low,close,vol as volume from daily where ts_code='002049.SZ' and trade_date>'20200101'")
