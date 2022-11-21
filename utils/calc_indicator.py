@@ -35,7 +35,7 @@ def RPS_indicator(period: int = 250):
 @count_time
 def calc_qfq(init=False):
     calc_sql_tmp = '''
-        insert into daily_qfq 
+        replace into daily_qfq 
         SELECT a.`ts_code`, a.`trade_date`, 
         round(`open`*b.adj_factor/c.adj_factor,2), round(`high`*b.adj_factor/c.adj_factor,2),
         round(`low`*b.adj_factor/c.adj_factor,2), round(`close`*b.adj_factor/c.adj_factor,2),
