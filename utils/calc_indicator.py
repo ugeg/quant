@@ -40,7 +40,7 @@ def calc_qfq(init=False):
         round(`open`*b.adj_factor/c.adj_factor,2), round(`high`*b.adj_factor/c.adj_factor,2),
         round(`low`*b.adj_factor/c.adj_factor,2), round(`close`*b.adj_factor/c.adj_factor,2),
         round(`pre_close`*b.adj_factor/c.adj_factor,2), `change`, `pct_chg`, `vol`, `amount` 
-        from (SELECT * from daily where ts_code='{}') a 
+        from (SELECT * from daily where ts_code='{}' and trade_date<='{}') a 
         INNER JOIN (SELECT * from adj_factor where ts_code='{}') b on a.ts_code=b.ts_code and a.trade_date=b.trade_date 
         LEFT JOIN (SELECT * from adj_factor where ts_code='{}' and trade_date='{}') c on a.ts_code=c.ts_code;'''
     # 计算全量数据
@@ -52,7 +52,7 @@ def calc_qfq(init=False):
             LEFT JOIN (SELECT DISTINCT ts_code from daily_qfq)b on a.ts_code = b.ts_code WHERE b.ts_code is null''')
         code_list = df_code.iloc[:, 0].values.tolist()
         for ts_code in code_list:
-            insert_sql = calc_sql_tmp.format(ts_code, ts_code, ts_code, end_date)
+            insert_sql = calc_sql_tmp.format(ts_code,end_date, ts_code, ts_code, end_date)
             insert_count = session.execute(insert_sql).rowcount
             print("ts_code:{},insert count:{}".format(ts_code, insert_count))
     # 计算增量数据
@@ -72,7 +72,7 @@ def calc_qfq(init=False):
             WHERE a.adj_factor<>b.adj_factor'''
             .format(date, date)).iloc[:, 0].values.tolist()
         for ts_code in code_list:
-            insert_sql = calc_sql_tmp.format(ts_code, ts_code, ts_code, date)
+            insert_sql = calc_sql_tmp.format(ts_code, date, ts_code, ts_code, date)
             insert_count = session.execute(insert_sql).rowcount
             print('ts_code:{},insert count:{}'.format(ts_code, insert_count))
 
