@@ -60,6 +60,21 @@ class MysqlConnector:
         self.connect.close()
 
 
+def mysql_replace_into(table, conn, keys, data_iter):
+    from sqlalchemy.ext.compiler import compiles
+    from sqlalchemy.sql.expression import Insert
+
+    @compiles(Insert)
+    def replace_string(insert, compiler, **kw):
+        s = compiler.visit_insert(insert, **kw)
+        s = s.replace("INSERT INTO", "REPLACE INTO")
+        return s
+
+    data = [dict(zip(keys, row)) for row in data_iter]
+
+    conn.execute(table.table.insert(), data)
+
+
 if __name__ == '__main__':
     mysql_util = MysqlConnector("localhost", "jing", "123456", "quant")
     # with mysql_util.engine.connect() as conn:
