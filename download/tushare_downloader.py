@@ -17,7 +17,8 @@ def download_basic_to_mysql(basic_type):
     mysql_connector.truncate(basic_type)
     print("download", basic_type, "and save to mysql")
     if basic_type == 'index_basic':
-        market_dict = {'MSCI': 'MSCI指数', 'CSI': '中证指数', 'SSE': '上交所指数', 'SZSE': '深交所指数', 'CICC': '中金指数', 'SW': '申万指数',
+        market_dict = {'MSCI': 'MSCI指数', 'CSI': '中证指数', 'SSE': '上交所指数', 'SZSE': '深交所指数',
+                       'CICC': '中金指数', 'SW': '申万指数',
                        'OTH': '其他指数'}
         for market in market_dict.keys():
             print("download index_basic for market", market)
@@ -26,6 +27,7 @@ def download_basic_to_mysql(basic_type):
                                          "base_point", "list_date", "index_type", "fullname", "weight_rule", "desc",
                                          "exp_date"])
             save(df, basic_type)
+            time.sleep(12)
     elif basic_type == 'stock_basic':
         df = pro.stock_basic(
             fields=["ts_code", "symbol", "name", "area", "industry", "market", "list_date", "fullname", "enname",
@@ -57,33 +59,36 @@ def get_daily(ts_code='', trade_date='', start_date='', end_date=''):
 
 
 @count_time
-def download_stock_daily_delta(table_name: str):
+def download_stock_daily_delta(table_name: str, start_day: str = None, end_day: str = None):
     # 表不存在时
-    try:
-        start_day = session.execute('select max(trade_date) as trade_date from {}'.format(table_name)).scalar()
-    except Exception as e:
-        print(e)
-        start_day = '20070101'
-    # start_day = session.query(func.max(Daily.trade_date)).scalar()
+    if not start_day:
+        try:
+            start_day = session.execute('select max(trade_date) as trade_date from {}'.format(table_name)).scalar()
+        except Exception as e:
+            print(e)
+            start_day = '20070101'
+            start_day = '20200101'
     if start_day:
         start_day = (datetime.datetime.strptime(start_day, "%Y%m%d") + datetime.timedelta(days=1)).strftime("%Y%m%d")
     else:
         start_day = '20070101'
-    current_time = datetime.datetime.now()
-    if current_time.hour > 15:
-        current_day = current_time.strftime("%Y%m%d")
-    else:
-        current_day = (current_time + datetime.timedelta(days=-1)).strftime("%Y%m%d")
-    df = pro.trade_cal(exchange='SSE', is_open='1', start_date=start_day, end_date=current_day, fields='cal_date')
-    download_day_count = len(df.index)
-    for i, date in enumerate(df['cal_date']):
-        # daily_data_df = get_daily(trade_date=date)
+    if not end_day:
+        current_time = datetime.datetime.now()
+        if current_time.hour > 15:
+            end_day = current_time.strftime("%Y%m%d")
+        else:
+            end_day = (current_time + datetime.timedelta(days=-1)).strftime("%Y%m%d")
+    trade_days = session.execute(
+        f"select cal_date from trade_cal where is_open=1 and cal_date>={start_day} and cal_date<={end_day}").fetchall()
+    trade_days = [trade_day[0] for trade_day in trade_days]
+    download_day_count = len(trade_days)
+    for i, date in enumerate(trade_days):
         daily_data_df = loop_until_success("get_" + table_name, **{"trade_date": date})
         save(daily_data_df, table_name)
         print("Downloading", table_name, "data:", date, "count:", len(daily_data_df.index),
               "\tcurrent progress:[", i + 1, "/",
               download_day_count, "]", (i + 1) * 100 // download_day_count, "%")
-        time.sleep(0.5)
+        time.sleep(0.6)
 
 
 def loop_until_success(fun_name, **kwargs):
@@ -114,6 +119,7 @@ def get_daily_basic(trade_date: str):
 
 
 def get_adj_factor(trade_date: str):
+    """复权因子"""
     df = pro.adj_factor(**{
         "ts_code": "",
         "trade_date": trade_date,
@@ -127,6 +133,29 @@ def get_adj_factor(trade_date: str):
         "adj_factor"
     ])
     return df
+
+
+def get_margin_detail(trade_date: str):
+    """融资融券明细"""
+    return pro.margin_detail(**{
+        "trade_date": trade_date,
+        "ts_code": "",
+        "start_date": "",
+        "end_date": "",
+        "limit": "",
+        "offset": ""
+    }, fields=[
+        "trade_date",
+        "ts_code",
+        "rzye",
+        "rqye",
+        "rzmre",
+        "rqyl",
+        "rzche",
+        "rqchl",
+        "rqmcl",
+        "rzrqye"
+    ])
 
 
 def download_stk_holdernumber():
@@ -167,6 +196,7 @@ if __name__ == '__main__':
     download_stock_daily_delta("daily")
     download_stock_daily_delta("daily_basic")
     download_stock_daily_delta("adj_factor")
+    download_stock_daily_delta("margin_detail")
     print("数据更新完成")
     # download_trade_cal()
     # get_daily_basic()

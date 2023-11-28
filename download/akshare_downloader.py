@@ -12,5 +12,9 @@ import akshare as ak
 # print(stock_zh_a_spot_em_df)
 #分红配送
 
-stock_fhps_em_df = ak.stock_fhps_em(date="20211231")
-print(stock_fhps_em_df)
+# stock_fhps_em_df = ak.stock_fhps_em(date="20211231")
+# print(stock_fhps_em_df)
+
+
+js_news_df = ak.js_news(timestamp="2022-12-08 21:57:18")
+print(js_news_df)

@@ -11,6 +11,7 @@ from utils import entity
 from utils.entity import Daily
 
 # mysql_sqlalchemy_url = "mysql+mysqlconnector://{}:{}@{}:{}/{}?auth_plugin=mysql_native_password"
+mysql_sqlalchemy_url = "mysql+pymysql://jing:123456@127.0.0.1:3306/test"
 mysql_sqlalchemy_url = "mysql+pymysql://{}:{}@{}:{}/{}"
 
 

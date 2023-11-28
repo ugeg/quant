@@ -1,5 +1,6 @@
 mysql:
-  ip: localhost
+#  ip: localhost
+  ip: 192.168.5.101
   port: 3306
   user: jing
   passwd: '123456'
