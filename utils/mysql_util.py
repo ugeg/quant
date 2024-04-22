@@ -27,7 +27,7 @@ class MysqlConnector:
         # mysql8.0以上默认加密方式变了，需要执行 ALTER USER 'jing'@'*' IDENTIFIED WITH mysql_native_password BY '123456';
         self.sqlalchemy_url = mysql_sqlalchemy_url.format(user, passwd, host, port, db)
         self.engine = sqlalchemy.create_engine(self.sqlalchemy_url, echo=False,
-                                               convert_unicode=True)  # type: sqlalchemy.engine.Engine
+                                               )  # type: sqlalchemy.engine.Engine
 
     def create_connect(self):
         self.connect = pymysql.connect(host=self.host, port=self.port, user=self.user, passwd=self.passwd, db=self.db,
