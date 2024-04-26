@@ -3,6 +3,7 @@ import re
 
 import pandas as pd
 from pandas import DataFrame
+from sqlalchemy import text
 
 import utils
 
@@ -15,7 +16,7 @@ def load_code2name(session):
     global name2code
     if name2code is None:
         try:
-            result = session.execute('select ts_code,name from stock_basic').fetchall()
+            result = session.execute(text('select ts_code,name from stock_basic')).fetchall()
             code2name = dict([(a, b) for a, b in result])
             name2code = dict([(b, a) for a, b in result])
             print("code2name加载完成")
