@@ -2,6 +2,7 @@ import datetime
 import time
 
 import tushare as ts
+from sqlalchemy import text
 
 import utils
 from utils.global_operator import save
@@ -63,7 +64,7 @@ def download_stock_daily_delta(table_name: str, start_day: str = None, end_day: 
     # 表不存在时
     if not start_day:
         try:
-            start_day = session.execute('select max(trade_date) as trade_date from {}'.format(table_name)).scalar()
+            start_day = session.execute(text(f'select max(trade_date) as trade_date from {table_name}')).scalar()
         except Exception as e:
             print(e)
             start_day = '20070101'
@@ -79,7 +80,7 @@ def download_stock_daily_delta(table_name: str, start_day: str = None, end_day: 
         else:
             end_day = (current_time + datetime.timedelta(days=-1)).strftime("%Y%m%d")
     trade_days = session.execute(
-        f"select cal_date from trade_cal where is_open=1 and cal_date>={start_day} and cal_date<={end_day}").fetchall()
+        text(f"select cal_date from trade_cal where is_open=1 and cal_date>={start_day} and cal_date<={end_day}")).fetchall()
     trade_days = [trade_day[0] for trade_day in trade_days]
     download_day_count = len(trade_days)
     for i, date in enumerate(trade_days):
@@ -193,11 +194,11 @@ if __name__ == '__main__':
     # download_basic_to_mysql('index_basic')
     # download_index_daily_to_mysql()
 
+    download_trade_cal()
     download_stock_daily_delta("daily")
-    download_stock_daily_delta("daily_basic")
+    # download_stock_daily_delta("daily_basic")
     download_stock_daily_delta("adj_factor")
-    download_stock_daily_delta("margin_detail")
+    # download_stock_daily_delta("margin_detail")
     print("数据更新完成")
-    # download_trade_cal()
     # get_daily_basic()
     # df = utils.global_operator.read("select trade_date,open,high,low,close,vol as volume from daily where ts_code='002049.SZ' and trade_date>'20200101'")

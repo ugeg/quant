@@ -4,7 +4,13 @@ import logging
 import time
 
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
-
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+# ch = logging.StreamHandler()
+# ch.setLevel(logging.DEBUG)
+# formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+# ch.setFormatter(formatter)
+# logger.addHandler(ch)
 
 def count_time(fun):
     def warpper(*args):

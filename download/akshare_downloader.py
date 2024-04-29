@@ -4,11 +4,13 @@ import time
 import traceback
 
 import akshare as ak
+import pandas as pd
 import sqlalchemy
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 import utils
+from utils.logging_util import logger
 
 mysql_config = utils.mysql_config
 mysql_url_template = "mysql+pymysql://{}:{}@{}:{}/{}"
@@ -21,7 +23,8 @@ def index_stock_info():
     """
     所有指数 index_code display_name publish_date
     """
-    ak.index_stock_info().to_sql('index_stock_info', engine, if_exists='replace', index=False)
+    df = ak.index_stock_info()
+    df.to_sql('index_stock_info', engine, if_exists='replace', index=False)
 
 
 def stock_zh_index_daily_em(symbol: str = "sh000001"):
@@ -31,23 +34,40 @@ def stock_zh_index_daily_em(symbol: str = "sh000001"):
     """
     stock_zh_index_daily_em_df = ak.stock_zh_index_daily_em(symbol=symbol)
     stock_zh_index_daily_em_df["symbol"] = symbol
+    with Session(engine) as session:
+        session.execute(text("truncate table stock_zh_index_daily_em"))
+        session.commit()
     stock_zh_index_daily_em_df.to_sql('stock_zh_index_daily_em', engine, if_exists='append', index=False)
+    print("保存指数日k数据")
 
 
 def get_trade_date_list():
     with Session(engine) as session:
         result_list = session.execute(
-            text("select `date` from stock_zh_index_daily_em where symbol='sh000001' order by `date` asc")).fetchall()
+            text("select `date` from stock_zh_index_daily_em where symbol='sh000001' order by `date`")).fetchall()
         if len(result_list) == 0:
             raise Exception("未获取到数据")
         return [result[0] for result in result_list]
+
+
+def get_max_trade_date_time():
+    with Session(engine) as session:
+        result_list = session.execute(
+            text("select max(`date`) from stock_zh_index_daily_em where symbol='sh000001'")).fetchall()
+        if len(result_list) == 0:
+            raise Exception("未获取到数据")
+        return str(result_list[0][0]) + " 15:00:00"
 
 
 def stock_zh_a_spot_em():
     """所有沪深京 A 股上市公司的实时行情数据"""
     stock_zh_a_spot_em_df = ak.stock_zh_a_spot_em()
     stock_zh_a_spot_em_df.drop(columns=["序号"], inplace=True)
+    with Session(engine) as session:
+        session.execute(text("truncate table stock_zh_a_spot_em"))
+        session.commit()
     stock_zh_a_spot_em_df.to_sql('stock_zh_a_spot_em', engine, if_exists='append', index=False)
+    print("保存沪深京 A 股上市公司的实时行情数据")
 
 
 def get_stock_list():
@@ -58,19 +78,23 @@ def get_stock_list():
             raise Exception("未获取到数据")
         return [result[0] for result in result_list]
 
+
 def stock_zh_a_hist(symbol: str = "000001", period: str = "daily", start_date: str = "20140101", adjust: str = "hfq"):
     current_date = datetime.datetime.now().strftime('%Y%m%d')
-    stock_zh_a_hist_df = ak.stock_zh_a_hist(symbol, period=period, start_date=start_date, end_date=current_date, adjust=adjust)
+    stock_zh_a_hist_df = ak.stock_zh_a_hist(symbol, period=period, start_date=start_date, end_date=current_date,
+                                            adjust=adjust)
     stock_zh_a_hist_df["代码"] = symbol
     stock_zh_a_hist_df.to_sql('stock_zh_a_hist', engine, if_exists='append', index=False)
     print(f"symbol:{symbol} start_date:{start_date} records:{stock_zh_a_hist_df.shape[0]} 下载完成")
+
 
 def get_all_daily_data():
     stock_list = get_stock_list()
     current_date = get_trade_date_list()[-1]
     with Session(engine) as session:
-        max_date_dict = {record[0]: record[1] for record in session.execute(text("select 代码,max(`日期`) from stock_zh_a_hist group by 代码")).fetchall()}
-        for index,stock in enumerate(stock_list):
+        max_date_dict = {record[0]: record[1] for record in
+                         session.execute(text("select 代码,max(`日期`) from stock_zh_a_hist group by 代码")).fetchall()}
+        for index, stock in enumerate(stock_list):
             # 查询该代码在数据库中的最新日期
             max_date = max_date_dict.get(stock)
             while True:
@@ -85,7 +109,7 @@ def get_all_daily_data():
                     else:
                         stock_zh_a_hist(stock)
                     session.commit()
-                    print(f"{stock} 下载完成。总进度{index+1}/{len(stock_list)} ")
+                    print(f"{stock} 下载完成。总进度{index + 1}/{len(stock_list)} ")
                     # time.sleep(0.01)
                     break
                 except Exception as e:
@@ -93,9 +117,60 @@ def get_all_daily_data():
                     time.sleep(10)
 
 
+def get_all_stock_minute_data(period="1", adjust: str = "hfq"):
+    """
+    获取所有股票分钟数据，只能获取到最近7个交易日的
+    '1', '5', '15', '30', '60'
+    """
+    max_trade_date_time = get_max_trade_date_time()
+    stock_list = get_stock_list()
+    with Session(engine) as session:
+        max_day_dict = {record[0]: record[1] for record in session.execute(
+            text(f"select symbol,max(`day`) from stock_zh_{period}_minute group by symbol order by symbol")).fetchall()}
+        for index, symbol in enumerate(stock_list):
+            # 查询该代码在数据库中的最新日期
+            max_day = max_day_dict.get(symbol)
+            if max_day is not None and max_day.strftime("%Y-%m-%d %H:%M:%S") == max_trade_date_time:
+                logger.info(f"symbol:{symbol}已最新，跳过")
+                continue
+            # 上交所主板 60 深交所主板 00 深交所创业板 30 上交所科创板68 北交所基础层 43 创新层 83、精选层 87、新上北交所 88
+            if symbol[0] in ["0", "3"]:
+                query_symbol = "sz" + symbol
+            elif symbol[0] in ["6"]:
+                query_symbol = "sh" + symbol
+            elif symbol[0] in ["4", "8"]:
+                query_symbol = "bj" + symbol
+            else:
+                raise NotImplemented("未处理的代码：" + symbol)
+            while True:
+                try:
+                    df = ak.stock_zh_a_minute(query_symbol, period=period, adjust=adjust)
+                    if max_day:
+                        df['day'] = pd.to_datetime(df['day'])
+                        # 筛选day大于max_day的数据,防止写入报错
+                        df = df[df["day"] > max_day]
+                    df["symbol"] = symbol
+                    df.to_sql(f'stock_zh_{period}_minute', engine, if_exists='append', index=False)
+                    logger.info(f"symbol:{symbol} records:{df.shape[0]}下载完成。总进度{index + 1}/{len(stock_list)}")
+                    break
+                except Exception as e:
+                    traceback.print_exc()
+                    logger.error(e)
+                    time.sleep(60)
+
 
 if __name__ == '__main__':
+    # # 获取上证指数历史数据（用于判断是否交易日）
+    # stock_zh_index_daily_em()
+    # # 获取所有股票代码
+    # stock_zh_a_spot_em()
+    # # 获取所有股票日k数据
     get_all_daily_data()
+
+    # get_all_stock_minute_data("5")
+    # get_all_stock_minute_data("15")
+    # get_all_stock_minute_data("30")
+    # get_all_stock_minute_data("60")
 # stock_zh_index_daily_df = ak.stock_zh_index_daily()
 # print(stock_zh_index_daily_df)
 # stock_zh_a_tick_tx_df = ak.stock_zh_a_tick_tx(code="sh600848", trade_date="20191011")

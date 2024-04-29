@@ -1,4 +1,5 @@
 # 导入相关模块和类
+import matplotlib.pyplot
 import pandas as pd
 import pybroker
 import pybroker as pb
@@ -65,3 +66,8 @@ print(result.orders)  # 查看订单
 print(result.positions)  # 查看持仓
 print(result.portfolio)  # 查看投资组合
 print(result.trades)  # 查看交易
+import matplotlib.pyplot as plt
+
+chart = plt.subplot2grid((3, 2), (0, 0), rowspan=3, colspan=2)
+chart.plot(result.portfolio.index, result.portfolio['market_value'])
+matplotlib.pyplot.show()

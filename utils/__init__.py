@@ -12,4 +12,4 @@ mysql_connector = utils.mysql_util.MysqlConnector(mysql_config.ip, mysql_config.
                                                   mysql_config.db)
 mysql_engine = mysql_connector.engine
 session = Session(mysql_engine, )
-utils.global_operator.load_code2name(session)
+# utils.global_operator.load_code2name(session)
