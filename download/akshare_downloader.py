@@ -38,7 +38,7 @@ def stock_zh_index_daily_em(symbol: str = "sh000001"):
         session.execute(text("truncate table stock_zh_index_daily_em"))
         session.commit()
     stock_zh_index_daily_em_df.to_sql('stock_zh_index_daily_em', engine, if_exists='append', index=False)
-    print("保存指数日k数据")
+    logger.info("保存指数日k数据")
 
 
 def get_trade_date_list():
@@ -67,7 +67,7 @@ def stock_zh_a_spot_em():
         session.execute(text("truncate table stock_zh_a_spot_em"))
         session.commit()
     stock_zh_a_spot_em_df.to_sql('stock_zh_a_spot_em', engine, if_exists='append', index=False)
-    print("保存沪深京 A 股上市公司的实时行情数据")
+    logger.info("保存沪深京 A 股上市公司的实时行情数据")
 
 
 def get_stock_list():
@@ -83,9 +83,8 @@ def stock_zh_a_hist(symbol: str = "000001", period: str = "daily", start_date: s
     current_date = datetime.datetime.now().strftime('%Y%m%d')
     stock_zh_a_hist_df = ak.stock_zh_a_hist(symbol, period=period, start_date=start_date, end_date=current_date,
                                             adjust=adjust)
-    stock_zh_a_hist_df["代码"] = symbol
     stock_zh_a_hist_df.to_sql('stock_zh_a_hist', engine, if_exists='append', index=False)
-    print(f"symbol:{symbol} start_date:{start_date} records:{stock_zh_a_hist_df.shape[0]} 下载完成")
+    logger.info(f"symbol:{symbol} start_date:{start_date} records:{stock_zh_a_hist_df.shape[0]} 下载完成")
 
 
 def get_all_daily_data():
@@ -93,7 +92,7 @@ def get_all_daily_data():
     current_date = get_trade_date_list()[-1]
     with Session(engine) as session:
         max_date_dict = {record[0]: record[1] for record in
-                         session.execute(text("select 代码,max(`日期`) from stock_zh_a_hist group by 代码")).fetchall()}
+                         session.execute(text("select `股票代码`,max(`日期`) from stock_zh_a_hist group by `股票代码`")).fetchall()}
         for index, stock in enumerate(stock_list):
             # 查询该代码在数据库中的最新日期
             max_date = max_date_dict.get(stock)
@@ -109,7 +108,7 @@ def get_all_daily_data():
                     else:
                         stock_zh_a_hist(stock)
                     session.commit()
-                    print(f"{stock} 下载完成。总进度{index + 1}/{len(stock_list)} ")
+                    logger.info(f"{stock} 下载完成。总进度{index + 1}/{len(stock_list)} ")
                     # time.sleep(0.01)
                     break
                 except Exception as e:
@@ -118,6 +117,7 @@ def get_all_daily_data():
 
 
 def get_all_stock_minute_data(period="1", adjust: str = "hfq"):
+    logger.info(f"get_all_stock_minute_data(period={period})")
     """
     获取所有股票分钟数据，只能获取到最近7个交易日的
     '1', '5', '15', '30', '60'
@@ -133,15 +133,15 @@ def get_all_stock_minute_data(period="1", adjust: str = "hfq"):
             if max_day is not None and max_day.strftime("%Y-%m-%d %H:%M:%S") == max_trade_date_time:
                 logger.info(f"symbol:{symbol}已最新，跳过")
                 continue
-            # 上交所主板 60 深交所主板 00 深交所创业板 30 上交所科创板68 北交所基础层 43 创新层 83、精选层 87、新上北交所 88
+            # 上交所主板 60 深交所主板 00 深交所创业板 30 上交所科创板68 北交所基础层 43 创新层 83、精选层 87、新上北交所 88,92
             if symbol[0] in ["0", "3"]:
                 query_symbol = "sz" + symbol
             elif symbol[0] in ["6"]:
                 query_symbol = "sh" + symbol
-            elif symbol[0] in ["4", "8"]:
+            elif symbol[0] in ["4", "8","9"]:
                 query_symbol = "bj" + symbol
             else:
-                raise NotImplemented("未处理的代码：" + symbol)
+                raise NotImplementedError("未处理的代码：" + symbol)
             while True:
                 try:
                     df = ak.stock_zh_a_minute(query_symbol, period=period, adjust=adjust)
@@ -161,13 +161,13 @@ def get_all_stock_minute_data(period="1", adjust: str = "hfq"):
 
 if __name__ == '__main__':
     # # 获取上证指数历史数据（用于判断是否交易日）
-    # stock_zh_index_daily_em()
+    stock_zh_index_daily_em()
     # # 获取所有股票代码
-    # stock_zh_a_spot_em()
+    stock_zh_a_spot_em()
     # # 获取所有股票日k数据
     get_all_daily_data()
 
-    # get_all_stock_minute_data("5")
+    get_all_stock_minute_data("5")
     # get_all_stock_minute_data("15")
     # get_all_stock_minute_data("30")
     # get_all_stock_minute_data("60")

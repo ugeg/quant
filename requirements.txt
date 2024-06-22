@@ -1,13 +1,10 @@
-pyyaml~=6.0
 pandas
-pymysql~=1.0.2
-sqlalchemy~=1.4.45
 pyalgotrade~=0.20
-matplotlib~=3.6.2
+matplotlib
 tushare~=1.2.89
 cryptography
 akshare
-numpy~=1.24.1
+numpy
 backtrader~=1.9.76.123
 requests
 lxml~=4.9.2
