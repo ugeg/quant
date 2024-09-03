@@ -1,18 +1,20 @@
+# common
 pandas
-pyalgotrade~=0.20
+numpy==1.26.4
 matplotlib
-tushare~=1.2.89
-cryptography
-akshare
-numpy
-backtrader~=1.9.76.123
-requests
-lxml~=4.9.2
-git+https://github.com/happydasch/btplotting
-tabulate~=0.9.0
 
-pyyaml
-akshare
+# mysql
 sqlalchemy
 pymysql
+
+# fetch
+akshare
+tushare
+baostock
+
+# backtest
 lib-pybroker
+backtrader
+backtrader_plotting
+git+https://github.com/happydasch/btplotting
+pyalgotrade

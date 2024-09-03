@@ -67,14 +67,16 @@ if __name__ == '__main__':
     socket_list = global_operator.get_code_list(start_date)
     use_direct_data = True
     for socket in socket_list:
-        scoket_name = global_operator.code2name[socket]
-        df = utils.backtrader_util.get_stock_daily_data(None, socket, start_date)
+        socket_name = global_operator.code2name.get(socket)
+        if not socket_name:
+            continue
+        df = utils.backtrader_util.get_stock_daily_data(socket, start_date)
         if use_direct_data:
             data = bt.feeds.PandasDirectData(dataname=df, fromdate=start, todate=end, datetime=0, openinterest=-1)
         else:
             data = bt.feeds.PandasData(dataname=df, fromdate=start, todate=end, openinterest=None)
             # data = PandasData_Extend(dataname=df, fromdate=start, todate=end, openinterest=None)
-        cerebro.adddata(data, name=scoket_name)
+        cerebro.adddata(data, name=socket_name)
     # Add a strategy
     cerebro.addstrategy(MyStrategy)
     # 设定初始资金

@@ -6,6 +6,7 @@ from pandas import DataFrame
 from sqlalchemy import text
 
 import utils
+from utils import mysql_util
 
 code2name: dict = None
 name2code: dict = None
@@ -22,7 +23,8 @@ def load_code2name(session):
             print("code2name加载完成")
         except Exception as e:
             print(e)
-
+with utils.mysql_util.session() as session:
+    load_code2name(session)
 def format_stock_code(src: str, format_type='tushare'):
     type_list = ['tushare', 'sina', 'name', 'code']
     if format_type not in type_list:
@@ -62,13 +64,13 @@ def save(df: DataFrame, table_name, db_type='mysql'):
 
 def read(query_sql: str):
     # return pd.read_sql_query(query_sql, utils.mysql_engine, parse_dates={"trade_date": "%Y%m%d"},index_col="trade_date")
-    return pd.read_sql_query(query_sql, utils.mysql_engine)
+    return pd.read_sql_query(query_sql, utils.mysql_util.engine)
 
 def get_last_trade_date(date:str=None):
-    sql = "SELECT max(cal_date) FROM trade_cal WHERE cal_date<=DATE_FORMAT(CURDATE(),'%Y%m%d') and is_open=1"
+    sql = "SELECT max(cal_date) FROM trade_cal WHERE cal_date<=DATE_FORMAT(CURDATE(),'%%Y%%m%%d') and is_open=1"
     if date:
         sql = sql+" AND cal_date<="+date
-    df = pd.read_sql_query(sql,utils.mysql_engine)
+    df = pd.read_sql_query(sql,mysql_util.engine)
     return df.iloc[0,0]
 def get_code_list(date='20220222'):
     # 默认2010年开始回测

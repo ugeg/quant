@@ -1,14 +1,11 @@
 # 导入相关模块和类
 import matplotlib.pyplot
 import pandas as pd
-import pybroker
 import pybroker as pb
 import sqlalchemy
 from pybroker import Strategy, StrategyConfig, ExecContext
 from pybroker.data import DataSource
 from pybroker.ext.data import AKShare
-from sqlalchemy import text
-from sqlalchemy.orm import Session
 
 # 查看当前版本
 print(pb.__version__)

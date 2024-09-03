@@ -9,14 +9,11 @@ import sqlalchemy
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-import utils
+from utils import mysql_util
 from utils.logging_util import logger
 
-mysql_config = utils.mysql_config
-mysql_url_template = "mysql+pymysql://{}:{}@{}:{}/{}"
-sqlalchemy_url = mysql_url_template.format(mysql_config.user, mysql_config.passwd, mysql_config.ip, mysql_config.port,
-                                           mysql_config.db)
-engine: sqlalchemy.engine.Engine = sqlalchemy.create_engine(sqlalchemy_url, echo=False)
+
+engine: sqlalchemy.engine.Engine = mysql_util.engine
 
 
 def index_stock_info():

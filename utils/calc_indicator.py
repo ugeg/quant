@@ -1,7 +1,8 @@
 import pandas as pd
 
-from utils import global_operator, session
+from utils import global_operator
 from utils.global_operator import save
+from utils.mysql_util import session
 from utils.logging_util import count_time
 
 

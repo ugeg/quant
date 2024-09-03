@@ -5,10 +5,10 @@ import akshare as ak
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from utils import mysql_engine
+from utils import mysql_util
 from utils.logging_util import logger
 
-
+mysql_engine = mysql_util.engine
 def futures_code_info():
     df_futures_code_info = ak.futures_display_main_sina()
     df_futures_code_info.to_sql('futures_code_info', mysql_engine, if_exists='replace', index=False)
@@ -47,17 +47,22 @@ def futures_zh_minute_sina():
         futures_codes_str = ak.match_main_contract(symbol=exchange_code)
         futures_codes = futures_codes_str.split(",")
         for futures_code in futures_codes:
-            futures_zh_minute_sina_df = ak.futures_zh_minute_sina(symbol=futures_code, period="1")
-            # 筛选日期大于futures_zh_minute_sina表中最大日期的数据
-            if max_datetime_dict.get(futures_code):
-                futures_zh_minute_sina_df = futures_zh_minute_sina_df[futures_zh_minute_sina_df['datetime'] > max_datetime_dict[futures_code]]
-            if len(futures_zh_minute_sina_df) == 0:
-                logger.info(f"futures_zh_minute_sina:{exchange_code}\t{futures_code} skip")
-                continue
-            futures_zh_minute_sina_df.insert(0, 'symbol', futures_code)
-            futures_zh_minute_sina_df.insert(1, 'exchange', exchange_code)
-            futures_zh_minute_sina_df.to_sql('futures_zh_minute_sina', mysql_engine, if_exists='append', index=False)
-            logger.info(f"futures_zh_minute_sina:{exchange_code}\t{futures_code} download success")
+            try:
+                futures_zh_minute_sina_df = ak.futures_zh_minute_sina(symbol=futures_code, period="1")
+                # 筛选日期大于futures_zh_minute_sina表中最大日期的数据
+                if max_datetime_dict.get(futures_code):
+                    futures_zh_minute_sina_df = futures_zh_minute_sina_df[futures_zh_minute_sina_df['datetime'] > max_datetime_dict[futures_code]]
+                if len(futures_zh_minute_sina_df) == 0:
+                    logger.info(f"futures_zh_minute_sina:{exchange_code}\t{futures_code} skip")
+                    continue
+                futures_zh_minute_sina_df.insert(0, 'symbol', futures_code)
+                futures_zh_minute_sina_df.insert(1, 'exchange', exchange_code)
+                futures_zh_minute_sina_df.to_sql('futures_zh_minute_sina', mysql_engine, if_exists='append', index=False)
+                logger.info(f"futures_zh_minute_sina:{exchange_code}\t{futures_code} download success")
+            except Exception as e:
+                import traceback
+                traceback.print_exc()
+
 
 
 if __name__ == '__main__':

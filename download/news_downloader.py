@@ -3,16 +3,18 @@ import time
 
 import akshare as ak
 import tushare as ts
-from sqlalchemy import func
+from sqlalchemy import func, text
+
+import config
+from utils import mysql_util
 from utils.entity import Daily
 import utils
 from utils.logging_util import count_time
 from utils.global_operator import save
 
 time_format = '%Y-%m-%d %H:%M:%S'
-pro = ts.pro_api(utils.conf.tushare_token)
-mysql_connector = utils.mysql_connector
-session = utils.session
+pro = ts.pro_api(config.tushare_token)
+session = mysql_util.session()
 
 
 def get_last_10000_news():
@@ -44,12 +46,12 @@ def loop_get_recent_news():
 def get_news_js(forward=True):
     if forward:
         """从当前时间更新到表中最大时间"""
-        start_date = session.execute("select cast(max(datetime) as char) from news_jin10").first()[0]
+        start_date = session.execute(text("select cast(max(datetime) as char) from news_jin10")).first()[0]
         end_date = datetime.datetime.now().strftime(time_format)
     else:
         """从表中最小时间更新到start_date"""
         start_date = '2016-01-01 00:00:00'
-        end_date = session.execute("select cast(min(datetime) as char) from news_jin10").first()[0]
+        end_date = session.execute(text("select cast(min(datetime) as char) from news_jin10")).first()[0]
     print('end_date:', end_date)
     while start_date < end_date:
         end_date = (datetime.datetime.strptime(end_date, time_format) - datetime.timedelta(seconds=1)).strftime(
@@ -68,5 +70,5 @@ def get_news_js(forward=True):
 
 
 if __name__ == '__main__':
-    # loop_get_recent_news()
-    get_news_js()
+    loop_get_recent_news()
+    # get_news_js()
