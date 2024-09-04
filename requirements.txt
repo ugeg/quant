@@ -15,6 +15,6 @@ baostock
 # backtest
 lib-pybroker
 backtrader
-backtrader_plotting
+# backtrader_plotting
 git+https://github.com/happydasch/btplotting
 pyalgotrade

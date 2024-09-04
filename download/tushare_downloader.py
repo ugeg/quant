@@ -4,18 +4,19 @@ import time
 import tushare as ts
 from sqlalchemy import text
 
+import config
 import utils
+from utils import mysql_util
 from utils.global_operator import save
 from utils.logging_util import count_time
 
-pro = ts.pro_api(utils.conf.tushare_token)
-mysql_connector = utils.mysql_connector
-session = utils.session
+pro = ts.pro_api(config.tushare_token)
 
 
 @count_time
 def download_basic_to_mysql(basic_type):
-    mysql_connector.truncate(basic_type)
+    with mysql_util.session() as session:
+        session.execute(text(f"truncate table {basic_type}"))
     print("download", basic_type, "and save to mysql")
     if basic_type == 'index_basic':
         market_dict = {'MSCI': 'MSCI指数', 'CSI': '中证指数', 'SSE': '上交所指数', 'SZSE': '深交所指数',
@@ -39,7 +40,8 @@ def download_basic_to_mysql(basic_type):
 @count_time
 def download_index_daily_to_mysql():
     table = "index_daily"
-    mysql_connector.truncate(table)
+    with mysql_util.session() as session:
+        session.execute(text(f"truncate table {table}"))
     index_dict = {'000001.SH': '上证指数', '000016.SH': '上证50', '000300.SH': '沪深300', '000688.SH': '科创50',
                   '399001.SZ': '深证成指',
                   '399006.SZ': '创业板指'}
@@ -64,7 +66,8 @@ def download_stock_daily_delta(table_name: str, start_day: str = None, end_day: 
     # 表不存在时
     if not start_day:
         try:
-            start_day = session.execute(text(f'select max(trade_date) as trade_date from {table_name}')).scalar()
+            with mysql_util.session() as session:
+                start_day = session.execute(text(f'select max(trade_date) as trade_date from {table_name}')).scalar()
         except Exception as e:
             print(e)
             start_day = '20070101'
@@ -172,8 +175,9 @@ def download_stk_holdernumber():
                    "offset": offset
                    }, fields=["ts_code", "ann_date", "end_date", "holder_num", "holder_nums"])
             save(df, "stk_holdernumber_tmp")
-            session.execute("replace into stk_holdernumber SELECT * from stk_holdernumber_tmp")
-            session.execute("drop table stk_holdernumber_tmp")
+            with mysql_util.session() as session:
+                session.execute("replace into stk_holdernumber SELECT * from stk_holdernumber_tmp")
+                session.execute("drop table stk_holdernumber_tmp")
             if len(df) < 3000:
                 break
             offset += 3000
@@ -190,11 +194,11 @@ def download_trade_cal():
 
 if __name__ == '__main__':
     print("数据更新开始")
+    download_basic_to_mysql('index_basic')
+    # 需要权限
     # download_basic_to_mysql('stock_basic')
-    # download_basic_to_mysql('index_basic')
     # download_index_daily_to_mysql()
-
-    download_trade_cal()
+    # download_trade_cal()
     download_stock_daily_delta("daily")
     # download_stock_daily_delta("daily_basic")
     download_stock_daily_delta("adj_factor")

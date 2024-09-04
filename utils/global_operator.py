@@ -39,7 +39,7 @@ def format_stock_code(src: str, format_type='tushare'):
         market = 'sh' if src[0] == 6 else 'sz'
         code = src
     else:
-        src = utils.global_operator.name2code[src]
+        src = name2code[src]
         return format_stock_code(src, format_type)
     if format_type == 'code':
         return code
@@ -48,14 +48,14 @@ def format_stock_code(src: str, format_type='tushare'):
     elif format_type == 'tushare':
         return code + '.' + market.upper()
     else:
-        return utils.global_operator.code2name[code]
+        return code2name[code]
 
 
 def save(df: DataFrame, table_name, db_type='mysql'):
     if db_type == 'mysql':
         try:
             print(datetime.datetime.now(), "save", len(df.index), "record to ", table_name)
-            df.to_sql(table_name, utils.mysql_engine, if_exists="append", index=False, method=utils.mysql_util.mysql_replace_into)
+            df.to_sql(table_name, mysql_util.engine, if_exists="append", index=False, method=utils.mysql_util.mysql_replace_into)
         except Exception as e:
             print(e)
     else:
