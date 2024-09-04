@@ -80,6 +80,7 @@ def stock_zh_a_hist(symbol: str = "000001", period: str = "daily", start_date: s
     current_date = datetime.datetime.now().strftime('%Y%m%d')
     stock_zh_a_hist_df = ak.stock_zh_a_hist(symbol, period=period, start_date=start_date, end_date=current_date,
                                             adjust=adjust)
+    stock_zh_a_hist_df.rename(columns={"日期": "trade_date","股票代码":"symbol", "开盘": "open", "收盘": "close", "最高": "high", "最低": "low", "成交量": "volume","成交额": "amount", "振幅": "amplitude", "涨跌幅": "pct_chg", "涨跌额": "change", "换手率": "turnover"},inplace=True)
     stock_zh_a_hist_df.to_sql('stock_zh_a_hist', engine, if_exists='append', index=False)
     logger.info(f"symbol:{symbol} start_date:{start_date} records:{stock_zh_a_hist_df.shape[0]} 下载完成")
 
@@ -164,7 +165,7 @@ if __name__ == '__main__':
     # # 获取所有股票日k数据
     get_all_daily_data()
 
-    get_all_stock_minute_data("5")
+    get_all_stock_minute_data("1")
     # get_all_stock_minute_data("15")
     # get_all_stock_minute_data("30")
     # get_all_stock_minute_data("60")

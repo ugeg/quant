@@ -3,9 +3,8 @@ import urllib.parse
 host = "localhost"
 port = "3306"
 username = "root"
-password = "jing123."
+password = ""
 database = "akshare"
-database = "quant"
 
 _dialect = "mysql"
 _driver = "pymysql"
