@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # @Author  : pengj    <ugeg@163.com>
 # @Time    : 2019/6/29 12:18
-# @File    : Strategy.py
+# @File    : strategy.py
 from pyalgotrade import strategy
 from pyalgotrade.technical import vwap, bollinger, ma, rsi, cross
 
