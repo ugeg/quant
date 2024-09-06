@@ -18,3 +18,6 @@ backtrader
 # backtrader_plotting
 git+https://github.com/happydasch/btplotting
 pyalgotrade
+
+# stock_analyze
+stockstats
