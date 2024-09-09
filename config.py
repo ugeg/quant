@@ -3,7 +3,7 @@ import urllib.parse
 host = "localhost"
 port = "3306"
 username = "root"
-password = ""
+password = "jing123."
 database = "akshare"
 
 _dialect = "mysql"

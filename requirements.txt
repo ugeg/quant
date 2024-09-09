@@ -7,7 +7,7 @@ matplotlib
 sqlalchemy
 pymysql
 
-# fetch
+# fetch data
 akshare
 tushare
 baostock
@@ -21,3 +21,8 @@ pyalgotrade
 
 # stock_analyze
 stockstats
+
+# reinforcement learning
+stable-baselines3
+gymnasium
+tensorboard

@@ -2,7 +2,6 @@ import os.path
 from typing import List
 
 import pandas as pd
-import sqlalchemy
 import stockstats
 
 
@@ -10,8 +9,8 @@ class Dataloader:
 
     def __init__(self, ticker_list: List[str], start_date: str, end_date: str, time_interval: str = "1d", **kwargs):
         self.ticker_list = list(set(ticker_list))  # 去重
-        self.start_date: str = start_date.replace('-', '')
-        self.end_date: str = end_date.replace('-', '')
+        self.start_date: str = start_date
+        self.end_date: str = end_date
         self.time_interval: str = time_interval
         self.dataframe: pd.DataFrame = pd.DataFrame()
 
@@ -104,7 +103,7 @@ class MySQLDataloader(Dataloader):
         ticker_list_str = "'" + "','".join(self.ticker_list) + "'"
         # 注意使用前复权的数据（前复权调整历史价格数据，后复权调整当前价格数据）
         query_sql = (f"SELECT trade_date as date,`open`,high,low,`close`, volume,symbol as tic from stock_zh_a_hist"
-                     f" WHERE symbol in ({ticker_list_str}) and trade_date>= {self.start_date} and  trade_date<= {self.end_date}")
+                     f" WHERE symbol in ({ticker_list_str}) and trade_date>= '{self.start_date}' and  trade_date<= '{self.end_date}'")
         print("query_sql:", query_sql)
         data_df = pd.read_sql(query_sql, self.mysql_engine)
         # create day of the week column (monday = 0)
@@ -121,26 +120,22 @@ class MySQLDataloader(Dataloader):
         self.dataframe = data_df.sort_values(by=["date", "tic"]).reset_index(drop=True)
 
     def get_trading_days(self, start_date: str, end_date: str) -> List[str]:
-        df = pd.read_sql(
-            f"SELECT cal_date from trade_cal WHERE cal_date>={self.start_date} and cal_date<={self.end_date} and is_open=1",
+        df = pd.read_sql("select `date` from stock_zh_index_daily_em where symbol='sh000001' and date>= '{self.start_date}' and  date<= '{self.end_date}' order by `date`",
             self.mysql_engine)
-        return [i[0:4] + "-" + i[4:6] + "-" + i[6:8] for i in list(df['cal_date'])]
+        return df["date"].tolist()
+
+
 class CsvDataloader(Dataloader):
 
-    def __init__(self, ticker_list: List[str], start_date: str, end_date: str, time_interval: str, data_dir:str):
+    def __init__(self, ticker_list: List[str], start_date: str, end_date: str, time_interval: str, data_dir: str):
         super().__init__(ticker_list, start_date, end_date, time_interval)
-        self.data_dir=data_dir
+        self.data_dir = data_dir
 
     def download_data(self):
         for ticker in self.ticker_list:
-            df = pd.read_csv(os.path.join(self.data_dir,ticker))
-            df = df[(df['trade_date']>=self.start_date) & (df['trade_date']<self.end_date)]
-            self.dataframe = pd.concat([self.dataframe,df],ignore_index=True)
+            df = pd.read_csv(os.path.join(self.data_dir, ticker))
+            df = df[(df['trade_date'] >= self.start_date) & (df['trade_date'] < self.end_date)]
+            self.dataframe = pd.concat([self.dataframe, df], ignore_index=True)
 
     def get_trading_days(self, start_date: str, end_date: str) -> List[str]:
         return self.dataframe['trade_date'].unique()
-
-
-
-
-
