@@ -8,6 +8,7 @@ import pandas as pd
 import sqlalchemy
 from sqlalchemy import text
 from sqlalchemy.orm import Session
+from tqdm import tqdm
 
 from utils import mysql_util
 from utils.logging_util import logger
@@ -90,15 +91,15 @@ def get_all_daily_data():
     current_date = get_trade_date_list()[-1]
     with Session(engine) as session:
         max_date_dict = {record[0]: record[1] for record in
-                         session.execute(text("select `股票代码`,max(`日期`) from stock_zh_a_hist group by `股票代码`")).fetchall()}
-        for index, stock in enumerate(stock_list):
+                         session.execute(text("select `symbol`,max(`trade_date`) from stock_zh_a_hist group by `symbol`")).fetchall()}
+        for stock in tqdm(stock_list, desc="Downloading Stocks Daily Data"):
             # 查询该代码在数据库中的最新日期
             max_date = max_date_dict.get(stock)
             while True:
                 try:
                     if max_date:
                         if max_date == current_date:
-                            print(f"{stock} 数据已最新，跳过")
+                            logger.debug(f"{stock} 数据已最新，跳过")
                             break
                         # 加一天
                         star_date = max_date + datetime.timedelta(days=1)
@@ -106,7 +107,6 @@ def get_all_daily_data():
                     else:
                         stock_zh_a_hist(stock)
                     session.commit()
-                    logger.info(f"{stock} 下载完成。总进度{index + 1}/{len(stock_list)} ")
                     # time.sleep(0.01)
                     break
                 except Exception as e:
@@ -125,11 +125,11 @@ def get_all_stock_minute_data(period="1", adjust: str = "hfq"):
     with Session(engine) as session:
         max_day_dict = {record[0]: record[1] for record in session.execute(
             text(f"select symbol,max(`day`) from stock_zh_{period}_minute group by symbol order by symbol")).fetchall()}
-        for index, symbol in enumerate(stock_list):
+        for symbol in tqdm(stock_list, desc="Downloading Stocks Minute Data"):
             # 查询该代码在数据库中的最新日期
             max_day = max_day_dict.get(symbol)
             if max_day is not None and max_day.strftime("%Y-%m-%d %H:%M:%S") == max_trade_date_time:
-                logger.info(f"symbol:{symbol}已最新，跳过")
+                logger.debug(f"symbol:{symbol}已最新，跳过")
                 continue
             # 上交所主板 60 深交所主板 00 深交所创业板 30 上交所科创板68 北交所基础层 43 创新层 83、精选层 87、新上北交所 88,92
             if symbol[0] in ["0", "3"]:
@@ -149,7 +149,6 @@ def get_all_stock_minute_data(period="1", adjust: str = "hfq"):
                         df = df[df["day"] > max_day]
                     df["symbol"] = symbol
                     df.to_sql(f'stock_zh_{period}_minute', engine, if_exists='append', index=False)
-                    logger.info(f"symbol:{symbol} records:{df.shape[0]}下载完成。总进度{index + 1}/{len(stock_list)}")
                     break
                 except Exception as e:
                     traceback.print_exc()
